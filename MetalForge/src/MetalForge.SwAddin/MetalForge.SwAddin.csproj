@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Complément SolidWorks (COM, .NET Framework 4.8, x64).
+    Les DLL d'interop sont lues dans le dossier d'installation de SolidWorks :
+      dotnet build -p:SolidWorksDir="C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS"
+    ou ouvrir MetalForge.sln dans Visual Studio 2022 (chemin par défaut ci-dessous).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>MetalForge.SwAddin</RootNamespace>
+    <AssemblyName>MetalForge.SwAddin</AssemblyName>
+    <Version>0.1.0</Version>
+    <Nullable>disable</Nullable>
+    <ComVisible>false</ComVisible>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <SolidWorksDir Condition="'$(SolidWorksDir)' == ''">C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS</SolidWorksDir>
+    <SolidWorksRedist>$(SolidWorksDir)\api\redist</SolidWorksRedist>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Microsoft.CSharp" />
+
+    <Reference Include="SolidWorks.Interop.sldworks">
+      <HintPath>$(SolidWorksRedist)\SolidWorks.Interop.sldworks.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swconst">
+      <HintPath>$(SolidWorksRedist)\SolidWorks.Interop.swconst.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swpublished">
+      <HintPath>$(SolidWorksRedist)\SolidWorks.Interop.swpublished.dll</HintPath>
+      <EmbedInteropTypes>false</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MetalForge.Core\MetalForge.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Install\*.bat" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Permet la compilation hors Windows / sans Visual Studio (assemblies de référence .NET Framework). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

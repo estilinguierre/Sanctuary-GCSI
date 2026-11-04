@@ -1,0 +1,21 @@
+name: MetalForge — tests du moteur
+
+on:
+  push:
+    paths: ["MetalForge/**", ".github/workflows/metalforge-core.yml"]
+  pull_request:
+    paths: ["MetalForge/**"]
+
+jobs:
+  core-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MetalForge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      # Le complément SolidWorks (Windows + licence SW) n'est pas compilé ici : uniquement le moteur et ses tests.
+      - run: dotnet test tests/MetalForge.Core.Tests --nologo
