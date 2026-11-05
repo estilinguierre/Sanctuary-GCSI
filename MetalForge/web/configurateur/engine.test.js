@@ -187,5 +187,30 @@ test('Nouvelles options : chapeaux, marches, platelages', () => {
   ['caillebotis-presse', 'tole-perforee', 'composite', 'collaborant'].forEach(t => ok(E.build('mezzanine', { deck: t }).plates.length > 0, t));
 });
 
+test('Limons : matrice de contrôle géométrique des développés et des raccords', () => {
+  const C = require('./stringer-check.js');
+  let nf = 0, nj = 0; const errs = [];
+  ['escalier-droit', 'escalier-quart', 'escalier-deux-quarts', 'escalier-demi'].forEach(id => ['balance', 'palier'].forEach(mode => ['gauche', 'droite'].forEach(turn =>
+    [{}, { stringer: 'exterieur' }, { sp: 'PL250x10' }, { tread: 'larmee' }, { H: 3100 }].forEach(extra => {
+      const p = Object.assign({ mode, turn }, extra), r = E.build(id, p), lim = r.flats.filter(f => /^Limon/.test(f.name));
+      const flagged = has(r, 'Hauteur du limon', 'fail'); // plat forcé trop petit : le moteur doit le signaler lui-même
+      lim.forEach(f => { nf++; const m = f.meta; C.checkStringerFlat(f, m.D, m.tv, m.dTop).filter(e => !(flagged && /non portée/.test(e))).forEach(e => errs.push(id + ' ' + JSON.stringify(p) + ' ' + f.name + ' : ' + e));
+        ok(f.dims.length >= 5 && f.points.length >= 4 && f.table.length > 0, f.name + ' : cotation complète');
+        const dD = f.dims.find(x => x.kind === 'a'), sa = dD && C.span(f.outline, dD.a[0]), sb = dD && C.span(f.outline, dD.b[0]);
+        ok(dD && sa && sb && Math.abs(dD.a[1] - sa[1]) < 3 && Math.abs(dD.b[1] - sb[0]) < 3, f.name + ' : cote D de rive haute à rive basse'); });
+      ['intérieur', 'extérieur'].forEach(side => { const s = lim.filter(f => f.name.includes(side));
+        for (let i = 0; i + 1 < s.length; i++) { nj++; C.checkJoint(s[i], s[i + 1]).forEach(e => errs.push(id + ' ' + JSON.stringify(p) + ' raccord ' + side + ' ' + (i + 1) + ' : ' + e)); } });
+      ok(extra.sp || has(r, 'Hauteur du limon', 'ok') || !lim.length, id + ' ' + JSON.stringify(p) + ' : limon auto conforme');
+    }))));
+  ok(errs.length === 0, errs.slice(0, 5).join(' | '));
+  ok(nf > 300 && nj > 100, nf + ' développés, ' + nj + ' raccords');
+});
+
+test('Développés : cotes présentes partout et exportées en DXF (calque COTES)', () => {
+  E.schema().forEach(s => E.build(s.id, {}).flats.forEach(f => ok(f.dims && f.dims.length >= 2, s.id + ' ' + f.name)));
+  const d = E.toDxf(E.build('escalier-quart', {}));
+  ok(/\nCOTES\n/.test(d) && !/[^\x00-\x7f]/.test(d) && d.trim().endsWith('EOF'));
+});
+
 console.log((failed ? '✖ ' : '✔ ') + (n - failed) + ' / ' + n + ' tests');
 process.exit(failed ? 1 : 0);

@@ -207,6 +207,20 @@ Les limons en **plat** sont modélisés en **tôle découpée** pour tous les es
   - copier les cotes en CSV ;
   - dans SolidWorks, enregistrer le DXF.
 
+- **Cotation complète de chaque développé** (écran, DXF calque COTES, SolidWorks) :
+  - longueur et hauteur hors tout ;
+  - position cumulée de chaque nez depuis l'origine, niveau de chaque marche ;
+  - largeur D perpendiculaire à la rive (ou hauteur verticale sur les petits tronçons d'angle) ;
+  - tableau des **points de découpe** P1, P2… (x, y), exporté avec les cotes de traçage en CSV.
+- **Géométrie contrôlée automatiquement** (`stringer-check.js`, 360 développés et leurs raccords testés à chaque livraison) :
+  - aucun contour croisé, rien sous le sol ;
+  - largeur constante D, sans zone mince ;
+  - rive haute à la cote de débord au-dessus de chaque nez ;
+  - chaque marche portée, 20 mm au moins sous la rive basse ;
+  - raccords d'angle sans ressaut, ou arrêt voulu sur poteau d'angle.
+
+![Développé coté d'un limon](images/configurateur-developpe-limon.png)
+
 Les limons profilés (UPN, tubes) restent des barres, posées au sol, avec coupes d'about à ajuster.
 
 ---
@@ -225,7 +239,6 @@ Si le runtime **Microsoft Edge WebView2** est absent, la commande ouvre la grill
 > ⚠️ Points à connaître :
 > - L'aperçu 3D charge three.js depuis le CDN jsDelivr : il faut une connexion internet.
 > - Les surfaces de révolution (virole, cône, piquage, trémie) ne sont pas générées en volume SolidWorks. Les créer en **Tôlerie** (pli lofté, bride de base) à partir du DXF fourni.
-> - Les escaliers balancés produisent des limons en segments soudés, à reprendre en limon tôle découpé si besoin.
 
 ---
 

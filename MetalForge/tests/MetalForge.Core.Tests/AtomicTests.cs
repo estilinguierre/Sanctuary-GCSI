@@ -134,6 +134,9 @@ namespace MetalForge.Core.Tests
             var s = Engine.Value.Build("escalier-quart");
             Assert.Equal(4, s.Model.Plates.Count(p => p.Role == "Limon tôle"));
             Assert.Contains(s.Flats, f => f.Name.StartsWith("Limon") && f.Table.Count > 0);
+            Assert.All(s.Flats, f => Assert.True(f.Dims.Count >= 2 && f.Points.Count > 0, f.Name + " : cotes"));
+            var dxf = s.FlatsDxf().ToString();
+            Assert.Contains("COTES", dxf);
         }
 
         [Fact]

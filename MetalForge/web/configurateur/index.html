@@ -93,6 +93,8 @@ h3 { font: 600 16px var(--display); text-transform: uppercase; letter-spacing: .
 .atomcard ul { margin: 0; padding: 0; }
 .flats svg { width: 100%; height: auto; max-height: 460px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
 .flats .cut { stroke: var(--minium); } .flats .bend { stroke: var(--steel); stroke-dasharray: 6 4; } .flats text { fill: var(--ink); font-family: var(--mono); }
+.flats .dim { stroke: var(--info); } .flats .dt { fill: var(--info); }
+.flatgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 textarea { width: 100%; min-height: 140px; font: 12px var(--mono); background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px; box-sizing: border-box; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
 .costin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 18px; margin-bottom: 10px; }
@@ -286,16 +288,17 @@ function renderPane() {
       P.innerHTML = `<div class="flathead"><b>${r.flats.length} développé(s)</b>
           <button class="btn primary" type="button" id="f-all">Copier le DXF de tous les développés</button>
           ${host ? `<button class="btn" type="button" id="f-save">Enregistrer le DXF…</button>` : ''}
-          <span class="note">DXF R12 : calques DECOUPE (contour), TRACAGE (marches), PLIAGE (plis), TEXTE.</span></div>
+          <span class="note">DXF R12 : calques DECOUPE (contour), TRACAGE (marches), PLIAGE (plis), COTES, TEXTE — cotes en mm.</span></div>
           <textarea id="f-buf" hidden></textarea>
           <div class="flats">${r.flats.map((f, i) => `<div class="flatcard">${flatSvg(f)}
-            ${f.table ? `<div class="tablewrap"><table><thead><tr>${(f.cols || ['Repère', 'x', 'y', '']).map(c => `<th${c === (f.cols || [])[0] ? '' : ' class="n"'}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${f.table.map(row => `<tr>${row.map((c, j) => `<td${j ? ' class="n"' : ''}>${typeof c === 'number' ? fmt(c, 1) : esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+            <div class="flatgrid">${f.table ? `<div><h3>Cotes de traçage</h3>${tableHtml(f.cols || ['Repère', 'x', 'y'], f.table)}</div>` : ''}
+            ${f.points ? `<div><h3>Points de découpe (x, y dans le repère du développé)</h3>${tableHtml(['Point', 'x (mm)', 'y (mm)'], f.points)}</div>` : ''}</div>
             <div class="row"><button class="btn" type="button" data-fdxf="${i}">Copier le DXF</button>${f.table ? `<button class="btn" type="button" data-fcsv="${i}">Copier les cotes (CSV)</button>` : ''}</div></div>`).join('')}</div>`;
       const copy = (txt, b) => navigator.clipboard.writeText(txt).then(() => { b.textContent = 'Copié'; }, () => { const t = $('f-buf'); t.hidden = false; t.value = txt; t.focus(); t.select(); b.textContent = 'Texte sélectionné : Ctrl+C'; });
       $('f-all').onclick = e => copy(E.toDxf(r), e.target);
       if (host) $('f-save').onclick = () => host.postMessage(JSON.stringify({ action: 'save', kind: 'dxf', name: r.name + ' - developpes.dxf', content: E.toDxf(r) }));
       P.querySelectorAll('[data-fdxf]').forEach(b => b.onclick = () => copy(E.toDxf({ flats: [r.flats[+b.dataset.fdxf]] }), b));
-      P.querySelectorAll('[data-fcsv]').forEach(b => b.onclick = () => { const f = r.flats[+b.dataset.fcsv]; copy([(f.cols || []).join(';')].concat(f.table.map(row => row.join(';').replace(/\./g, ','))).join('\r\n'), b); });
+      P.querySelectorAll('[data-fcsv]').forEach(b => b.onclick = () => { const f = r.flats[+b.dataset.fcsv]; copy([(f.cols || []).join(';')].concat(f.table.map(row => row.join(';').replace(/\./g, ',')), ['', 'Point;x;y'], (f.points || []).map(row => row.join(';').replace(/\./g, ','))).join('\r\n'), b); });
       break;
     }
     case 'export': {
@@ -317,13 +320,27 @@ function renderPane() {
   }
 }
 function flatSvg(f) {
-  const pts = f.outline.concat(...(f.lines || []).map(l => [l.a, l.b])), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1), pad = Math.max(w, h) * 0.08;
-  const fs = Math.max(w, h) / 45, T = p => `${(p[0] - x0 + pad).toFixed(1)},${(y1 - p[1] + pad).toFixed(1)}`;
-  return `<h3>${esc(f.name)}</h3><svg viewBox="0 0 ${(w + 2 * pad).toFixed(0)} ${(h + 2 * pad).toFixed(0)}" role="img" aria-label="${esc(f.name)}">
-    <polygon class="cut" points="${f.outline.map(T).join(' ')}" fill="none" stroke-width="${(fs / 6).toFixed(2)}"/>
-    ${(f.lines || []).map(l => `<line class="bend" x1="${T(l.a).split(',')[0]}" y1="${T(l.a).split(',')[1]}" x2="${T(l.b).split(',')[0]}" y2="${T(l.b).split(',')[1]}" stroke-width="${(fs / 8).toFixed(2)}"/>${l.label ? `<text x="${T(l.a).split(',')[0]}" y="${(+T(l.a).split(',')[1] - fs * 0.4).toFixed(1)}" font-size="${fs.toFixed(1)}">${esc(l.label)}</text>` : ''}`).join('')}
-    <text x="${pad.toFixed(1)}" y="${(h + 1.8 * pad).toFixed(1)}" font-size="${fs.toFixed(1)}">${fmt(w, 1)} × ${fmt(h, 1)} mm</text></svg>`;
+  const dimPts = []; (f.dims || []).forEach(d => { if (d.kind === 'h') dimPts.push([d.x0, d.y], [d.x1, d.y]); else if (d.kind === 'v') dimPts.push([d.x, d.y0], [d.x, d.y1]); else if (d.kind === 'a') dimPts.push(d.a, d.b); else dimPts.push([d.x, d.y]); });
+  const pts = f.outline.concat(...(f.lines || []).map(l => [l.a, l.b]), dimPts), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1), pad = Math.max(w, h) * 0.06;
+  const fs = Math.max(w, h) / 60, X = p => (p[0] - x0 + pad), Y = p => (y1 - p[1] + pad), P = p => `${X(p).toFixed(1)},${Y(p).toFixed(1)}`;
+  const tick = p => `<line class="dim" x1="${(X(p) - fs / 2).toFixed(1)}" y1="${(Y(p) + fs / 2).toFixed(1)}" x2="${(X(p) + fs / 2).toFixed(1)}" y2="${(Y(p) - fs / 2).toFixed(1)}"/>`;
+  const dims = (f.dims || []).map(d => {
+    if (d.kind === 'h') return `<line class="dim" x1="${X([d.x0])}" y1="${Y([0, d.y])}" x2="${X([d.x1])}" y2="${Y([0, d.y])}"/>${tick([d.x0, d.y])}${tick([d.x1, d.y])}<text class="dt" x="${((X([d.x0]) + X([d.x1])) / 2).toFixed(1)}" y="${(Y([0, d.y]) - fs * 0.4).toFixed(1)}" font-size="${fs.toFixed(1)}" text-anchor="middle">${esc(d.text)}</text>`;
+    if (d.kind === 'v') return `<line class="dim" x1="${X([d.x])}" y1="${Y([0, d.y0])}" x2="${X([d.x])}" y2="${Y([0, d.y1])}"/>${tick([d.x, d.y0])}${tick([d.x, d.y1])}<text class="dt" transform="translate(${(X([d.x]) - fs * 0.4).toFixed(1)},${((Y([0, d.y0]) + Y([0, d.y1])) / 2).toFixed(1)}) rotate(-90)" font-size="${fs.toFixed(1)}" text-anchor="middle">${esc(d.text)}</text>`;
+    if (d.kind === 'ox') return `${tick([d.x, d.y])}<text class="dt" transform="translate(${(X([d.x]) + fs * 0.3).toFixed(1)},${(Y([0, d.y]) + fs * 0.6).toFixed(1)}) rotate(-90)" font-size="${(fs * 0.8).toFixed(1)}" text-anchor="end">${esc(d.text)}</text>`;
+    if (d.kind === 'oy') return `${tick([d.x, d.y])}<text class="dt" x="${(X([d.x]) + fs * 0.6).toFixed(1)}" y="${(Y([0, d.y]) + fs * 0.3).toFixed(1)}" font-size="${(fs * 0.8).toFixed(1)}">${esc(d.text)}</text>`;
+    if (d.kind === 'a') return `<line class="dim" x1="${X(d.a)}" y1="${Y(d.a)}" x2="${X(d.b)}" y2="${Y(d.b)}"/>${tick(d.a)}${tick(d.b)}<text class="dt" x="${((X(d.a) + X(d.b)) / 2 + fs * 0.5).toFixed(1)}" y="${((Y(d.a) + Y(d.b)) / 2).toFixed(1)}" font-size="${fs.toFixed(1)}">${esc(d.text)}</text>`;
+    return '';
+  }).join('');
+  return `<h3>${esc(f.name)}</h3><svg viewBox="0 0 ${(w + 2 * pad).toFixed(0)} ${(h + 2 * pad).toFixed(0)}" role="img" aria-label="${esc(f.name)}" style="--sw:${(fs / 7).toFixed(2)}">
+    <polygon class="cut" points="${f.outline.map(P).join(' ')}" fill="none" stroke-width="${(fs / 6).toFixed(2)}"/>
+    ${(f.lines || []).map(l => `<line class="bend" x1="${X(l.a).toFixed(1)}" y1="${Y(l.a).toFixed(1)}" x2="${X(l.b).toFixed(1)}" y2="${Y(l.b).toFixed(1)}" stroke-width="${(fs / 8).toFixed(2)}"/>${l.label ? `<text x="${(X(l.a) + fs * 0.2).toFixed(1)}" y="${(Y(l.a) - fs * 0.35).toFixed(1)}" font-size="${(fs * 0.9).toFixed(1)}">${esc(l.label)}</text>` : ''}`).join('')}
+    <g stroke-width="${(fs / 9).toFixed(2)}">${dims}</g>
+    ${(f.texts || []).map(t => `<text x="${X(t.at).toFixed(1)}" y="${Y(t.at).toFixed(1)}" font-size="${(fs * 0.8).toFixed(1)}">${esc(t.text)}</text>`).join('')}</svg>`;
+}
+function tableHtml(cols, rows) {
+  return `<div class="tablewrap"><table><thead><tr>${cols.map((c, j) => `<th${j ? ' class="n"' : ''}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map((c, j) => `<td${j ? ' class="n"' : ''}>${typeof c === 'number' ? fmt(c, 1) : esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
 // ------------------------------------------------------------------ vue 3D

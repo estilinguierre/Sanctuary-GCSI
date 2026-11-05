@@ -16,6 +16,10 @@ namespace MetalForge.Core.Atomic
         public List<(Vec3 A, Vec3 B, string Layer, string Label)> Lines { get; } = new List<(Vec3, Vec3, string, string)>();
         /// <summary>Cotes de traçage (repère, nez, dessus, profondeur…).</summary>
         public List<string[]> Table { get; } = new List<string[]>();
+        /// <summary>Cotes : h (horizontale), v (verticale), ox/oy (cote d'origine), a (alignée), de A à B.</summary>
+        public List<(string Kind, Vec3 A, Vec3 B, string Text)> Dims { get; } = new List<(string, Vec3, Vec3, string)>();
+        /// <summary>Points de découpe (repère, x, y) depuis l'origine bas gauche.</summary>
+        public List<string[]> Points { get; } = new List<string[]>();
     }
 
     /// <summary>Résultat du moteur atomique, converti en modèle neutre MetalForge (SolidWorks, débit, devis, note de calcul).</summary>
@@ -84,6 +88,16 @@ namespace MetalForge.Core.Atomic
                 foreach (object[] q in (object[])f["outline"]) fp.Outline.Add(new Vec3(D(q[0]), D(q[1]), 0));
                     if (f.TryGetValue("table", out var tb) && tb is object[] rows)
                     foreach (object[] row in rows) fp.Table.Add(row.Select(c => Convert.ToString(c, CultureInfo.InvariantCulture)).ToArray());
+                if (f.TryGetValue("points", out var pt) && pt is object[] prow)
+                    foreach (object[] row in prow) fp.Points.Add(row.Select(c => Convert.ToString(c, CultureInfo.InvariantCulture)).ToArray());
+                foreach (IDictionary<string, object> dm in Arr(f, "dims"))
+                {
+                    string k = Str(dm, "kind"), tx = Str(dm, "text");
+                    if (k == "h") fp.Dims.Add((k, new Vec3(Num(dm, "x0"), Num(dm, "y"), 0), new Vec3(Num(dm, "x1"), Num(dm, "y"), 0), tx));
+                    else if (k == "v") fp.Dims.Add((k, new Vec3(Num(dm, "x"), Num(dm, "y0"), 0), new Vec3(Num(dm, "x"), Num(dm, "y1"), 0), tx));
+                    else if (k == "a") { var a = (object[])dm["a"]; var b = (object[])dm["b"]; fp.Dims.Add((k, new Vec3(D(a[0]), D(a[1]), 0), new Vec3(D(b[0]), D(b[1]), 0), tx)); }
+                    else { var q = new Vec3(Num(dm, "x"), Num(dm, "y"), 0); fp.Dims.Add((k, q, q, tx)); }
+                }
                 if (f.TryGetValue("lines", out var ls) && ls is object[] la)
                     foreach (IDictionary<string, object> l in la)
                     {
@@ -118,7 +132,16 @@ namespace MetalForge.Core.Atomic
                 Vec3 T(Vec3 p) => new Vec3(p.X - mx + x0, p.Y - my, 0);
                 dxf.Polygon(f.Outline.Select(T), "DECOUPE");
                 foreach (var l in f.Lines) { dxf.Line(T(l.A), T(l.B), l.Layer); if (!string.IsNullOrEmpty(l.Label)) dxf.Text(T(new Vec3((l.A.X + l.B.X) / 2 + 4, (l.A.Y + l.B.Y) / 2, 0)), l.Label, 10, l.Layer); }
-                dxf.Text(new Vec3(x0, -40, 0), f.Name, 14);
+                double ht = Math.Max(8, Math.Min(30, w / 120));
+                void Tick(Vec3 p, double s) => dxf.Line(new Vec3(p.X - s, p.Y - s, 0), new Vec3(p.X + s, p.Y + s, 0), "COTES");
+                foreach (var dm in f.Dims)
+                {
+                    Vec3 a = T(dm.A), b = T(dm.B);
+                    if (dm.Kind == "ox" || dm.Kind == "oy") { Tick(a, ht / 3); dxf.Text(new Vec3(a.X + ht * 0.4, a.Y - ht * 0.8, 0), dm.Text, ht * 0.8, "COTES"); continue; }
+                    dxf.Line(a, b, "COTES"); Tick(a, ht / 2); Tick(b, ht / 2);
+                    dxf.Text(new Vec3((a.X + b.X) / 2 + (dm.Kind == "h" ? 0 : ht * 0.5), (a.Y + b.Y) / 2 + (dm.Kind == "h" ? ht * 0.4 : 0), 0), dm.Text, ht, "COTES");
+                }
+                dxf.Text(new Vec3(x0, -40 - 4 * ht, 0), f.Name, 14);
                 x0 += w + 200;
             }
             return dxf;

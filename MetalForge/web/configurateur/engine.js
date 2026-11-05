@@ -196,7 +196,7 @@
   var AUTO = {
     poteau: function (p) { return p.fam === 'TC' && p.B >= 30; }, mainCourante: function (p) { return p.fam === 'TRD' && p.B >= 33; },
     lisse: function (p) { return p.fam === 'TR'; }, cadre: function (p) { return p.fam === 'TR' && p.H >= 40; }, pilier: function (p) { return p.fam === 'TC' && p.B >= 80; },
-    limon: function (p) { return p.fam === 'PL' && p.B >= 150; }, limonCentral: function (p) { return p.fam === 'TR' && p.H >= 100; }, poutre: function (p) { return p.fam === 'IPE'; },
+    limon: function (p) { return p.fam === 'PL' && p.B >= 150 && p.T >= 8; }, limonCentral: function (p) { return p.fam === 'TR' && p.H >= 100; }, poutre: function (p) { return p.fam === 'IPE'; },
     poteauStructure: function (p) { return p.fam === 'TC' && p.B >= 70; }, echelon: function (p) { return p.fam === 'TC' && p.B >= 20; }, barreau: function (p) { return p.fam === 'RP' && p.B >= 12; },
     corniere: function (p) { return p.fam === 'L'; }, fut: function (p) { return p.fam === 'TRD' && p.B >= 88; }
   };
@@ -1230,50 +1230,146 @@
     }
     return out;
   }
+  /** Décalage parallèle vers le bas (distance perpendiculaire d) d'une polyligne (t, y) croissante en t, raccords en onglet. */
+  function offsetDown(P, d) {
+    var n = [], i;
+    for (i = 0; i + 1 < P.length; i++) { var dx = P[i + 1][0] - P[i][0], dy = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dy); n.push([dy / l * d, -dx / l * d]); }
+    var out = [[P[0][0] + n[0][0], P[0][1] + n[0][1]]];
+    for (i = 1; i + 1 < P.length; i++) {
+      var a0 = [P[i - 1][0] + n[i - 1][0], P[i - 1][1] + n[i - 1][1]], a1 = [P[i][0] + n[i - 1][0], P[i][1] + n[i - 1][1]];
+      var b0 = [P[i][0] + n[i][0], P[i][1] + n[i][1]], b1 = [P[i + 1][0] + n[i][0], P[i + 1][1] + n[i][1]];
+      var r = psub(a1, a0), q = psub(b1, b0), den = pcross(r, q);
+      if (Math.abs(den) < 1e-9) { out.push(a1); continue; }
+      var k = pcross(psub(b0, a0), q) / den; out.push(padd(a0, pmul(r, k)));
+    }
+    var L = P.length - 1; out.push([P[L][0] + n[L - 1][0], P[L][1] + n[L - 1][1]]);
+    var mono = [out[0]]; for (i = 1; i < out.length; i++) if (out[i][0] > mono[mono.length - 1][0] + 1e-6) mono.push(out[i]); // supprime les boucles d'onglet
+    return mono;
+  }
+  /** Morceau d'une polyligne (t, y) entre t = a et t = b (interpolé aux bornes). */
+  function clipT(P, a, b) {
+    function at(t) { for (var i = 0; i + 1 < P.length; i++) if (t <= P[i + 1][0] + 1e-9) { var u = (t - P[i][0]) / (P[i + 1][0] - P[i][0]); return [t, P[i][1] + (P[i + 1][1] - P[i][1]) * u]; } return [t, P[P.length - 1][1]]; }
+    var o = [at(Math.max(a, P[0][0]))];
+    P.forEach(function (q) { if (q[0] > a + 1e-6 && q[0] < b - 1e-6) o.push(q); });
+    o.push(at(Math.min(b, P[P.length - 1][0])));
+    return o;
+  }
+  function vspan(P, x) { // étendue verticale d'un contour à l'abscisse x
+    var lo = 1e18, hi = -1e18;
+    for (var i = 0; i < P.length; i++) { var a = P[i], b = P[(i + 1) % P.length]; if ((a[0] - x) * (b[0] - x) <= 0 && Math.abs(b[0] - a[0]) > 1e-9) { var y = a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]); lo = Math.min(lo, y); hi = Math.max(hi, y); } }
+    return lo <= hi ? [lo, hi] : null;
+  }
   /**
-   * ATOME « limon tôle » : contour exact par tronçon droit du bord (coupe au sol, coupe verticale au chevêtre,
-   * ressaut aux paliers), modélisé en tôle et livré en développé avec traçage des marches.
+   * ATOME « limon tôle » : contour exact par tronçon droit du bord — rive haute parallèle à la ligne de nez (+ débord),
+   * rive basse parallèle à distance perpendiculaire constante D, coupe d'aplomb au sol, coupe verticale au chevêtre,
+   * ressaut aux paliers. Développé complet : traçage des marches, cotes cumulées, niveaux, points de découpe.
+   * Retourne le déficit de portée (mm) le plus défavorable : > 0 si une marche n'est pas entièrement prise dans le limon.
    */
   function stringerPlates(m, p, band, L, nT, h, landIdx, inner, sp, tv) {
-    var P = inner ? band.inner : band.outer, ts = L.map(function (l) { return (inner ? l.I : l.O).t; }), T = sp.T, D = sp.sh;
-    var nose = [[ts[0] - (ts[1] - ts[0]), 0]];
+    var P = inner ? band.inner : band.outer, get = function (l) { return inner ? l.I : l.O; }, ts = L.map(function (l) { return get(l).t; }), T = sp.T, D = sp.sh;
+    // nez réel de chaque marche sur ce bord (contremarche décalée du recouvrement, intersectée avec le bord)
+    var front = L.map(function (l, k2) {
+      if (k2 >= nT || landIdx[k2]) return get(l).t;
+      var back = pmul(l.t, -p.nosing), I2 = padd(l.I.pt, back), O2 = padd(l.O.pt, back);
+      var hit = inner ? rayPoly(O2, pnorm(psub(I2, O2)), band.inner) : rayPoly(I2, pnorm(psub(O2, I2)), band.outer);
+      return hit ? hit.t : get(l).t - p.nosing;
+    });
+    // ligne de nez : par les nez réels ; au palier, horizontale puis remontée d'un giron avant la volée suivante.
+    // Sur un bord où le palier se réduit à un angle (palier quart tournant, côté jour nul), la ligne est coupée
+    // en deux « volées » qui s'arrêtent au poteau d'angle.
+    var cumV = [0]; for (var iv = 1; iv < P.length; iv++) cumV.push(cumV[iv - 1] + pdist(P[iv - 1], P[iv]));
+    var runs = [[[front[0] - (front[1] - front[0]), 0]]], cur = runs[0], splits = [];
     for (var k = 0; k <= nT; k++) {
-      nose.push([ts[k], (k + 1) * h]);
-      if (landIdx[k] && k + 2 <= nT) { var gN = ts[k + 2] - ts[k + 1], tf = ts[k + 1] - gN; if (tf > ts[k] + 1) nose.push([tf, (k + 1) * h]); }
+      var pt = [front[k], (k + 1) * h], last = cur[cur.length - 1];
+      var shortLanding = k > 0 && landIdx[k - 1] && (ts[k] - ts[k - 1] < 0.5 * Math.max(ts[Math.min(k + 1, nT)] - ts[k], 1) || front[k] <= last[0] + 0.5);
+      if (shortLanding) {
+        var tc = ts[k]; cumV.forEach(function (c) { if (c >= ts[k - 1] - 1 && c <= ts[k] + 1) tc = c; });
+        front[k] = Math.max(front[k], tc); pt[0] = front[k];
+        if (last[0] < tc - 0.5) cur.push([tc, last[1] + (k > 1 ? 0 : 0)]);
+        cur = [[tc, pt[1]]]; runs.push(cur); if (pt[0] > tc + 0.5) cur.push(pt);
+        splits.push({ t: tc, yLow: k * h, yHigh: (k + 1) * h });
+        continue;
+      }
+      if (pt[0] > last[0] + 0.5) cur.push(pt); else if (k === nT) cur[cur.length - 1] = [last[0], pt[1]];
+      if (landIdx[k] && k + 2 <= nT && ts[k + 1] - ts[k] >= 1) { var gN = front[k + 2] - front[k + 1], tf = front[k + 1] - gN; if (tf > front[k] + 1) cur.push([tf, (k + 1) * h]); }
     }
-    function seg(t) { for (var i = 0; i + 1 < nose.length; i++) if (t <= nose[i + 1][0] + 1e-9) return i; return nose.length - 2; }
-    function yN(t) { var i = seg(t), a = nose[i], b = nose[i + 1], d = b[0] - a[0]; return d > 1e-9 ? a[1] + (b[1] - a[1]) * (t - a[0]) / d : b[1]; }
-    function slope(t) { var i = seg(t), a = nose[i], b = nose[i + 1], d = b[0] - a[0]; return d > 1e-9 ? (b[1] - a[1]) / d : 0; }
-    var top = function (t) { return yN(t) + p.dTop; }, bot = function (t, s2) { return top(t) - D * Math.sqrt(1 + s2 * s2); };
+    var lines2 = runs.filter(function (r0) { return r0.length >= 2; }).map(function (r0) {
+      var tp0 = r0.map(function (q) { return [q[0], q[1] + p.dTop]; });
+      var u0 = pnorm(psub(tp0[1], tp0[0])), u1 = pnorm(psub(tp0[tp0.length - 1], tp0[tp0.length - 2]));
+      tp0.unshift(psub(tp0[0], pmul(u0, 4 * D))); tp0.push(padd(tp0[tp0.length - 1], pmul(u1, 4 * D)));
+      return { t0: r0[0][0], t1: r0[r0.length - 1][0], top: tp0, bot: offsetDown(tp0, D) };
+    });
+    function runFor(a0, b0) { var mid = (Math.max(a0, lines2[0].t0) + b0) / 2, best = lines2[0]; lines2.forEach(function (r0) { if (mid >= r0.t0 - 1 && mid <= r0.t1 + 1) best = r0; }); return best; }
     var cum = [0]; for (var i = 1; i < P.length; i++) cum.push(cum[i - 1] + pdist(P[i - 1], P[i]));
-    var tS = nose[0][0], tE = ts[nT], name = inner ? 'intérieur' : 'extérieur', pieces = [];
+    var tE = ts[nT], name = inner ? 'intérieur' : 'extérieur', pieces = [], deficit = -1e9;
     for (i = 0; i + 1 < P.length; i++) {
-      var a = i === 0 ? Math.min(tS, 0) : cum[i], b = cum[i + 1]; a = Math.max(a, tS); b = Math.min(b, tE); if (b - a < 1) continue;
+      var a = i === 0 ? -1e9 : cum[i], b = i + 2 === P.length ? tE : Math.min(cum[i + 1], tE); if (b - Math.max(a, lines2[0].top[0][0]) < 1) continue;
       pieces.push({ i: i, a: a, b: b });
     }
+    var ang = Math.atan2(h, Math.max(ts[1] - ts[0], 1)) / DEG;
     pieces.forEach(function (pc, pi) {
       var d = pnorm(psub(P[pc.i + 1], P[pc.i])), n = [-d[1], d[0]], out = inner ? n : pmul(n, -1);
       var plane = Math.abs(d[1]) < 1e-9 ? 'XY' : Math.abs(d[0]) < 1e-9 ? 'YZ' : null; if (!plane) return;
-      var bps = [pc.a, pc.b].concat(nose.map(function (q) { return q[0]; }).filter(function (t) { return t > pc.a + 1e-6 && t < pc.b - 1e-6; })).sort(function (x, y) { return x - y; });
-      var lower = bps.map(function (t, j) { var s1 = slope(Math.max(pc.a, t - 1)), s2 = slope(Math.min(pc.b, t + 1)); return [t, Math.min(bot(t, s1), bot(t, s2))]; });
-      var poly = clipY0(lower.concat(bps.slice().reverse().map(function (t) { return [t, top(t)]; })));
+      var rn = runFor(pc.a, pc.b), tp = clipT(rn.top, pc.a, pc.b), bp = clipT(rn.bot, pc.a, pc.b);
+      var poly = clipY0(bp.concat(tp.slice().reverse()));
       if (poly.length < 3) return;
+      var t0 = Math.min.apply(null, poly.map(function (q) { return q[0]; }));
       var U = function (t) { var q = polyPt(P, t); return plane === 'XY' ? q[0] : q[1]; };
       var off = plane === 'XY' ? P[pc.i][1] + out[1] * T / 2 : P[pc.i][0] + out[0] * T / 2;
       m.plate('LIM', 'Limon tôle', plane, poly.map(function (q) { return [U(q[0]), q[1]]; }), T, off, T);
-      var sL = function (t) { return t - pc.a; }, lines = [], table = [];
+      // développé : origine = extrémité basse gauche du tronçon
+      var sL = function (t) { return t - t0; }, fpoly = poly.map(function (q) { return [round(sL(q[0]), 1), round(q[1], 1)]; });
+      var lines = [], table = [], noses = [], dims = [], xs = fpoly.map(function (q) { return q[0]; }), ys = fpoly.map(function (q) { return q[1]; });
+      var W = Math.max.apply(null, xs), Hh = Math.max.apply(null, ys), yb = Math.min.apply(null, ys);
       for (var k2 = 0; k2 < nT; k2++) {
-        if (ts[k2] < pc.a - 1e-6 || ts[k2] >= pc.b - 1e-6) continue;
-        var y = (k2 + 1) * h, x0 = sL(ts[k2]) - (landIdx[k2] ? 0 : p.nosing), x1 = sL(Math.min(ts[k2 + 1], pc.b));
-        lines.push({ a: [x0, y], b: [x1, y], layer: 'TRACAGE', label: landIdx[k2] ? 'Palier' : 'M' + (k2 + 1) });
+        var tb = Math.min(ts[k2 + 1], pc.b), tfr = Math.max(front[k2], pc.a);
+        if (tb <= Math.max(pc.a, t0) + 1 || tfr >= pc.b - 1) continue;
+        var y = (k2 + 1) * h, x0 = sL(tfr), x1 = sL(tb), lab = landIdx[k2] ? 'Palier' : 'M' + (k2 + 1);
+        lines.push({ a: [x0, y], b: [x1, y], layer: 'TRACAGE', label: lab });
         lines.push({ a: [x0, y - tv], b: [x1, y - tv], layer: 'TRACAGE' });
-        table.push([landIdx[k2] ? 'Palier' : 'M' + (k2 + 1), round(x0, 1), round(y, 1), round(x1 - x0, 1)]);
+        lines.push({ a: [x0, y - tv], b: [x0, y], layer: 'TRACAGE' });
+        if (!landIdx[k2] && front[k2] >= pc.a && front[k2] <= pc.b) noses.push([round(sL(front[k2]), 1), y]);
+        table.push([lab, round(x0, 1), round(y, 1), round(x1 - x0, 1), round(y - tv, 1)]);
+        // portée : la marche (dessus et dessous) doit être prise dans le limon, 20 mm sous la rive basse au moins
+        [x0, x1].forEach(function (x) { var spn = vspan(fpoly, Math.min(Math.max(x, 0.5), W - 0.5)); if (spn) deficit = Math.max(deficit, spn[0] - (y - tv - 20), (y + 5) - spn[1]); });
       }
-      var xs = poly.map(function (q) { return sL(q[0]); }), dev = Math.max.apply(null, xs) - Math.min.apply(null, xs);
-      m.flat({ name: 'Limon ' + name + (pieces.length > 1 ? ' — tronçon ' + (pi + 1) + '/' + pieces.length : '') + ' · ' + sp.label + ' (débit ' + f0(dev) + ' mm)',
-               outline: poly.map(function (q) { return [sL(q[0]), q[1]]; }), lines: lines, table: table, cols: ['Marche', 'Nez à (mm)', 'Dessus à (mm)', 'Profondeur'],
-               texts: [{ at: [0, -40], text: 'Niveau 0 = sol fini ; traits = dessus et dessous de marche' }] });
+      // cotes : longueur hors tout, hauteur, nez cumulés depuis l'origine, niveaux des marches, largeur perpendiculaire
+      dims.push({ kind: 'h', x0: 0, x1: W, y: yb - 120, text: f0(W) });
+      dims.push({ kind: 'v', y0: yb, y1: Hh, x: W + 120, text: f0(Hh - yb) });
+      table.forEach(function (row) { dims.push({ kind: 'ox', x: row[1], y: yb - 60, text: f0(row[1]) }); dims.push({ kind: 'oy', y: row[2], x: W + 60, text: f0(row[2]) }); });
+      // épaisseur perpendiculaire D : sur un segment de rive haute dont la perpendiculaire retombe sur la rive basse, dans le plat
+      var segs = [];
+      for (var si = 0; si + 1 < tp.length; si++) {
+        var qa = [sL(tp[si][0]), tp[si][1]], qb = [sL(tp[si + 1][0]), tp[si + 1][1]];
+        if (Math.abs(qb[0] - qa[0]) > 1) segs.push([qa, qb, Math.hypot(qb[0] - qa[0], qb[1] - qa[1])]);
+      }
+      segs.sort(function (u, v) { return v[2] - u[2]; });
+      var dimD = null;
+      segs.some(function (sg) {
+        var dd = pnorm(psub(sg[1], sg[0])), nn2 = [dd[1], -dd[0]]; if (nn2[1] > 0) nn2 = pmul(nn2, -1);
+        return [0.5, 0.3, 0.7].some(function (f) {
+          var qm = [sg[0][0] + (sg[1][0] - sg[0][0]) * f, sg[0][1] + (sg[1][1] - sg[0][1]) * f], qe = [qm[0] + nn2[0] * D, qm[1] + nn2[1] * D];
+          if (qm[0] < 0.5 || qm[0] > W - 0.5 || qe[0] < 0.5 || qe[0] > W - 0.5) return false;
+          var s1 = vspan(fpoly, qm[0]), s2 = vspan(fpoly, qe[0]);
+          if (!s1 || !s2 || Math.abs(s1[1] - qm[1]) > 1 || Math.abs(s2[0] - qe[1]) > 2) return false;
+          dimD = { kind: 'a', a: [round(qm[0], 1), round(qm[1], 1)], b: [round(qe[0], 1), round(qe[1], 1)], text: 'D ' + f0(D) }; return true;
+        });
+      });
+      if (!dimD) { var sm = vspan(fpoly, W / 2); if (sm) dimD = { kind: 'a', a: [W / 2, sm[1]], b: [W / 2, sm[0]], text: 'D ' + f0(D) + ' (⟂ rive) · ' + f0(sm[1] - sm[0]) + ' vertical' }; }
+      if (dimD) dims.push(dimD);
+      var pts = fpoly.map(function (q, j) { return ['P' + (j + 1), q[0], q[1]]; });
+      m.flat({ name: 'Limon ' + name + (pieces.length > 1 ? ' — tronçon ' + (pi + 1) + '/' + pieces.length : '') + ' · ' + sp.label + ' (débit ' + f0(W) + ' x ' + f0(Hh - yb) + ')',
+               outline: fpoly, lines: lines, table: table, cols: ['Marche', 'Nez à (mm)', 'Dessus à (mm)', 'Profondeur', 'Dessous à (mm)'], points: pts, noses: noses, dims: dims,
+               texts: [{ at: [0, yb - 200], text: 'Origine (0,0) = point bas gauche · niveau 0 = sol fini · pente ≈ ' + f1(ang) + '° · débord ' + f0(p.dTop) + ' · ép. ' + T }],
+               meta: { D: D, tv: tv, dTop: p.dTop, edge: name, stepStart: splits.some(function (sp2) { return Math.abs(sp2.t - pc.a) < 2; }), stepEnd: splits.some(function (sp2) { return Math.abs(sp2.t - pc.b) < 2; }) } });
+      splits.forEach(function (sp2) { if (Math.abs(sp2.t - pc.b) < 2) m.flats[m.flats.length - 1].texts.push({ at: [W - 400, Hh + 60], text: 'Arrêt sur poteau d\'angle : ressaut ' + f0(sp2.yHigh - sp2.yLow) + ' mm avec le tronçon suivant' }); });
     });
+    splits.forEach(function (sp2) { // poteau d'angle (noyau) recevant les deux limons au palier côté jour
+      var q = polyPt(P, sp2.t), dd = pnorm(psub(P[1], P[0])), o2 = inner ? [-dd[1], dd[0]] : [dd[1], -dd[0]], c = padd(q, pmul(o2, 0));
+      m.member('PN', 'Poteau d\'angle (noyau)', 'TC100x100x4', [c[0], 0, c[1]], [c[0], sp2.yHigh + p.dTop, c[1]]);
+      m.info('Palier côté jour', 'Limons arrêtés sur poteau d\'angle 100x100 : ressaut de ' + f0(sp2.yHigh - sp2.yLow) + ' mm entre les deux tronçons (bord ' + name + ').');
+    });
+    return deficit;
   }
 
   /**
@@ -1383,11 +1479,14 @@
         if (fz === 0.2) m.flat({ name: 'Crémaillère (x2) · ' + sp.label, outline: o.map(function (q) { return [q[0] - (lines[0] - g), q[1]]; }), lines: [], texts: [] });
       });
     } else if (sp.fam === 'PL' && (p.stringer === 'lateraux' || p.stringer === 'exterieur')) {
-      var tvis = (p.tread === 'pliee' || p.tread === 'beton' || p.tread === 'perforee') ? Math.max(p.fold, tt) : tt, dmin = p.dTop + tvis + 100;
-      m.rule(sp.sh >= dmin, 'Hauteur du limon', f0(sp.sh) + ' mm ≥ ' + f0(dmin) + ' (débord + marche + fixation)', f0(sp.sh) + ' mm < ' + f0(dmin) + ' mm : pas la place de fixer les marches', 'règle de construction');
+      var tvis = (p.tread === 'pliee' || p.tread === 'beton' || p.tread === 'perforee') ? Math.max(p.fold, tt) : tt;
+      var dfc = -1e9;
+      if (p.stringer === 'lateraux') dfc = Math.max(dfc, stringerPlates(m, p, band, L, nT, h, landIdx, true, sp, tvis));
+      dfc = Math.max(dfc, stringerPlates(m, p, band, L, nT, h, landIdx, false, sp, tvis));
+      var dReq = Math.ceil((sp.sh + Math.max(0, dfc) * Math.cos(Math.atan2(h, g))) / 10) * 10;
+      m.rule(dfc <= 0, 'Hauteur du limon', f0(sp.sh) + ' mm : chaque marche est prise dans le limon (≥ 20 mm sous la rive basse)',
+             f0(sp.sh) + ' mm : marche non portée de ' + f0(dfc) + ' mm — prévoir un limon d\'au moins ' + dReq + ' mm', 'règle de construction');
       m.rule(sp.T >= 8, 'Épaisseur du limon', f0(sp.T) + ' mm ≥ 8', f0(sp.T) + ' mm < 8 mm : soudure et rigidité insuffisantes', 'règle de construction');
-      if (p.stringer === 'lateraux') stringerPlates(m, p, band, L, nT, h, landIdx, true, sp, tvis);
-      stringerPlates(m, p, band, L, nT, h, landIdx, false, sp, tvis);
     } else edges.forEach(function (fn, ei) {
       var off = p.stringer === 'central' ? 0 : (ei === 0 && edges.length === 2 ? 1 : -1) * sp.wa / 2;
       edgeChains(function (l) {
@@ -1825,11 +1924,11 @@
         sp.H = p.H; sp.W = p.accessW - 40; sp.usage = p.use === 'industriel' || p.use === 'stockage' ? 'industriel' : p.use === 'erp' ? 'erp' : 'collectif';
         sp.opening = 0; sp.rails = 'both'; sp.floorLow = false; sp.upper = false; sp.walls = 'aucun'; sp.h = sp.usage === 'industriel' ? 200 : sp.usage === 'erp' ? 155 : 165;
         if (sp.usage === 'industriel') { sp.blondel = 640; sp.infill = 'industriel'; sp.railH = 1000; }
-        var sm = solve('escalier-droit', coerce('escalier-droit', sp)).m, run = straightRunFor(sp);
+        var sm = solveCached('escalier-droit', coerce('escalier-droit', sp)).m, run = straightRunFor(sp);
         m.merge(sm, [a1 - 20, 0, -run], -90);
         m.value('Escalier d\'accès', 'intégré (' + sm.values.filter(function (v) { return /marches/.test(v[0]); }).map(function (v) { return v[1]; })[0] + ')');
       } else if (p.access === 'echelle') {
-        var lm = solve('echelle', coerce('echelle', { climb: p.H, context: 'aucun' })).m;
+        var lm = solveCached('echelle', coerce('echelle', { climb: p.H, context: 'aucun' })).m;
         m.merge(lm, [a0 + 50, 0, -250], 0);
       }
       // vérifications
@@ -2343,6 +2442,8 @@
    * Dimensionnement automatique : chaque profil réglé sur « Auto » prend le plus léger de sa série qui satisfait
    * les vérifications de résistance qui le concernent (recherche dichotomique, les autres profils étant fixés).
    */
+  var SOLVE_CACHE = {};
+  function solveCached(id, p) { var key = id + JSON.stringify(p); if (!SOLVE_CACHE[key]) SOLVE_CACHE[key] = solve(id, p); return SOLVE_CACHE[key]; }
   function solve(id, p) {
     var f = FAMILIES[id], chosen = [];
     var vis = function (q) { if (!q.show) return true; var v = p[q.show[0]]; return q.show.slice(1).some(function (x) { return x === v || String(x) === String(v); }); };
@@ -2353,8 +2454,8 @@
     autos.forEach(function (q) {
       var c = cands[q.k], re = new RegExp(q.auto || '.', 'i');
       var okAt = function (i) { p[q.k] = c[i]; try { var mm = f.build(p); return !mm.checks.some(function (ch) { return ch.level === 'fail' && re.test(ch.rule); }); } catch (e) { return false; } };
-      var lo = 0, hi = c.length - 1, best = -1;
-      if (okAt(hi)) { best = hi; while (lo < hi) { var mid = (lo + hi) >> 1; if (okAt(mid)) { best = mid; hi = mid; } else lo = mid + 1; } best = lo; }
+      // balayage du plus léger au plus lourd : la conformité ne suit pas strictement la masse (largeur / épaisseur)
+      var best = -1; for (var ci = 0; ci < c.length; ci++) if (okAt(ci)) { best = ci; break; }
       p[q.k] = c[best >= 0 ? best : c.length - 1]; chosen.push({ k: q.k, label: q.l, id: p[q.k], found: best >= 0 });
     });
     var m = f.build(p);
@@ -2365,10 +2466,24 @@
     return { m: m, p: p, auto: chosen };
   }
 
+  /** Cotation minimale de tout développé : hors tout, positions des lignes (plis, traçage), points de découpe. */
+  function ensureDims(f) {
+    var xs = f.outline.map(function (q) { return q[0]; }), ys = f.outline.map(function (q) { return q[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), span = Math.max(x1 - x0, y1 - y0);
+    if (!f.dims) {
+      f.dims = [{ kind: 'h', x0: x0, x1: x1, y: y0 - span * 0.08, text: f0(x1 - x0) }, { kind: 'v', y0: y0, y1: y1, x: x1 + span * 0.08, text: f0(y1 - y0) }];
+      (f.lines || []).forEach(function (l) { if (Math.abs(l.a[0] - l.b[0]) < 1e-6 && l.layer === 'PLIAGE') f.dims.push({ kind: 'ox', x: l.a[0], y: y0 - span * 0.04, text: f1(l.a[0] - x0) }); });
+    }
+    if (!f.points && f.outline.length <= 40) f.points = f.outline.map(function (q, j) { return ['P' + (j + 1), round(q[0] - x0, 1), round(q[1] - y0, 1)]; });
+    return f;
+  }
+
   /** Construit un ouvrage : résultat complet, sérialisable en JSON (lu par SolidWorks). */
   function build(id, input, opt) {
     var f = FAMILIES[id]; if (!f) throw new Error('Ouvrage inconnu : ' + id);
+    SOLVE_CACHE = {};
     var sv = solve(id, coerce(id, input)), p = sv.p, m = sv.m, t = totals(m), n = nest(m, opt && opt.nest), c = cost(m, n, opt && opt.cost);
+    m.flats.forEach(ensureDims);
     var fails = m.checks.filter(function (x) { return x.level === 'fail'; }).length;
     return {
       engine: 'MetalForge', version: VERSION, family: id, label: f.label, params: p, name: m.name, auto: sv.auto,
@@ -2397,14 +2512,30 @@
   function toDxf(r) {
     var o = ['0', 'SECTION', '2', 'HEADER', '9', '$ACADVER', '1', 'AC1009', '9', '$INSUNITS', '70', '4', '0', 'ENDSEC', '0', 'SECTION', '2', 'ENTITIES'];
     function line(a, b, layer) { o.push('0', 'LINE', '8', layer, '10', a[0].toFixed(3), '20', a[1].toFixed(3), '30', '0', '11', b[0].toFixed(3), '21', b[1].toFixed(3), '31', '0'); }
-    function text(at, s, h, layer) { o.push('0', 'TEXT', '8', layer || 'TEXTE', '10', at[0].toFixed(3), '20', at[1].toFixed(3), '30', '0', '40', String(h || 12), '1', ascii(s)); }
+    function text(at, s, h, layer, rot, center) {
+      o.push('0', 'TEXT', '8', layer || 'TEXTE', '10', at[0].toFixed(3), '20', at[1].toFixed(3), '30', '0', '40', String(h || 12), '1', ascii(s));
+      if (rot) o.push('50', String(rot));
+      if (center) o.push('72', '1', '11', at[0].toFixed(3), '21', at[1].toFixed(3), '31', '0');
+    }
+    function tick(p0, sz) { line([p0[0] - sz, p0[1] - sz], [p0[0] + sz, p0[1] + sz], 'COTES'); }
+    function dims(f, T, ht) {
+      (f.dims || []).forEach(function (d) {
+        if (d.kind === 'h') { var a = T([d.x0, d.y]), b = T([d.x1, d.y]); line(a, b, 'COTES'); tick(a, ht / 2); tick(b, ht / 2); text([(a[0] + b[0]) / 2, a[1] + ht * 0.4], d.text, ht, 'COTES', 0, true); }
+        else if (d.kind === 'v') { var c = T([d.x, d.y0]), e = T([d.x, d.y1]); line(c, e, 'COTES'); tick(c, ht / 2); tick(e, ht / 2); text([c[0] - ht * 0.4, (c[1] + e[1]) / 2], d.text, ht, 'COTES', 90, true); }
+        else if (d.kind === 'ox') { var q = T([d.x, d.y]); tick(q, ht / 3); text([q[0] - ht * 0.3, q[1] - ht * 0.6], d.text, ht * 0.8, 'COTES', 90); }
+        else if (d.kind === 'oy') { var w = T([d.x, d.y]); tick(w, ht / 3); text([w[0] + ht * 0.6, w[1] - ht * 0.3], d.text, ht * 0.8, 'COTES'); }
+        else if (d.kind === 'a') { var g = T(d.a), k = T(d.b); line(g, k, 'COTES'); tick(g, ht / 2); tick(k, ht / 2); text([(g[0] + k[0]) / 2 + ht * 0.5, (g[1] + k[1]) / 2], d.text, ht, 'COTES'); }
+      });
+    }
     var x0 = 0;
     r.flats.forEach(function (f) {
       var xs = f.outline.map(function (q) { return q[0]; }), ys = f.outline.map(function (q) { return q[1]; }), mx = Math.min.apply(null, xs), my = Math.min.apply(null, ys), w = Math.max.apply(null, xs) - mx;
       var T = function (q) { return [q[0] - mx + x0, q[1] - my]; };
       for (var i = 0; i < f.outline.length; i++) line(T(f.outline[i]), T(f.outline[(i + 1) % f.outline.length]), 'DECOUPE');
       (f.lines || []).forEach(function (l) { line(T(l.a), T(l.b), l.layer || 'PLIAGE'); if (l.label) text(T([(l.a[0] + l.b[0]) / 2 + 4, (l.a[1] + l.b[1]) / 2]), l.label, 10, l.layer || 'PLIAGE'); });
-      text([x0, -40], f.name, 14); (f.texts || []).forEach(function (t) { text(T(t.at), t.text, 10); });
+      var ht = Math.max(8, Math.min(30, w / 120));
+      dims(ensureDims(f), T, ht);
+      text([x0, -40 - 4 * ht], f.name, 14); (f.texts || []).forEach(function (t) { text(T(t.at), t.text, 10); });
       x0 += w + 200;
     });
     o.push('0', 'ENDSEC', '0', 'EOF');
