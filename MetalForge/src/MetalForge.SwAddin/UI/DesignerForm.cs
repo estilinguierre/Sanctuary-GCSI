@@ -5,6 +5,7 @@ using MetalForge.Core.Costing;
 using MetalForge.Core.Export;
 using MetalForge.Core.Fabrication;
 using MetalForge.Core.Model;
+using MetalForge.Core.Reports;
 using MetalForge.Core.Stairs;
 using MetalForge.SwAddin.Settings;
 
@@ -24,6 +25,8 @@ namespace MetalForge.SwAddin.UI
         private readonly TextBox _report = MonoBox();
         private readonly TextBox _nesting = MonoBox();
         private readonly TextBox _cost = MonoBox();
+        private readonly TextBox _galva = MonoBox();
+        private CostEstimate _estimate;
         private readonly Label _status = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true };
         private DesignResult _result;
         private NestingResult _nest;
@@ -47,11 +50,13 @@ namespace MetalForge.SwAddin.UI
             tabs.TabPages.Add(Page("Rapport & conformité", _report));
             tabs.TabPages.Add(Page("Plan de débit", _nesting));
             tabs.TabPages.Add(Page("Devis", _cost));
+            tabs.TabPages.Add(Page("Galvanisation", _galva));
             split.Panel2.Controls.Add(tabs);
 
             var bar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(4) };
             bar.Controls.Add(Button("Fermer", (s, e) => Close()));
             bar.Controls.Add(Button("Générer dans SolidWorks", (s, e) => Generate(), bold: true));
+            bar.Controls.Add(Button("Note de calcul…", (s, e) => ExportNote()));
             bar.Controls.Add(Button("Exporter DXF…", (s, e) => ExportDxf()));
             bar.Controls.Add(Button("Exporter nomenclature CSV…", (s, e) => ExportCsv()));
             bar.Controls.Add(Button("Hypothèses de prix…", (s, e) => EditCost()));
@@ -76,7 +81,9 @@ namespace MetalForge.SwAddin.UI
                 _report.Text = _result.ToReport().Replace("\n", "\r\n");
                 _nest = BarNester.Nest(CutPiece.FromModel(_result.Model), _settings.ToNestingSettings());
                 _nesting.Text = _nest.ToReport().Replace("\n", "\r\n");
-                _cost.Text = CostEstimator.Estimate(_result.Model, _settings.Cost, _nest).ToReport().Replace("\n", "\r\n");
+                _estimate = CostEstimator.Estimate(_result.Model, _settings.Cost, _nest);
+                _cost.Text = _estimate.ToReport().Replace("\n", "\r\n");
+                _galva.Text = GalvanizingAdvisor.ToReport(_result.Model).Replace("\n", "\r\n");
                 bool ok = _result.IsCompliant;
                 _status.ForeColor = ok ? Color.DarkGreen : Color.Firebrick;
                 _status.Text = (ok ? "✔ Conforme aux vérifications" : "✖ Non-conformités : voir l'onglet Rapport")
@@ -131,6 +138,20 @@ namespace MetalForge.SwAddin.UI
                     DxfDrawings.FrontView(_result.Model).Save(d.FileName);
                     if (_designer is StairDesigner sd)
                         DxfDrawings.Stringer(sd).Save(System.IO.Path.ChangeExtension(d.FileName, null) + "_limon.dxf");
+                }
+        }
+
+        private bool Galvanized => _settings.Cost.Finish == Finish.Galvanisation || _settings.Cost.Finish == Finish.GalvaThermolaquage;
+
+        /// <summary>Note de calcul HTML autonome (imprimable en PDF), ouverte dans le navigateur.</summary>
+        private void ExportNote()
+        {
+            if (_result == null) return;
+            using (var d = new SaveFileDialog { Filter = "Note de calcul HTML|*.html", FileName = Safe(_result.Model.Name) + " - note de calcul.html" })
+                if (d.ShowDialog(this) == DialogResult.OK)
+                {
+                    System.IO.File.WriteAllText(d.FileName, CalculationNote.Build(_designer.Title, _result, _nest, _estimate, Galvanized), System.Text.Encoding.UTF8);
+                    try { System.Diagnostics.Process.Start(d.FileName); } catch { /* pas de navigateur par défaut */ }
                 }
         }
 

@@ -5,15 +5,36 @@ using System.Linq;
 using MetalForge.Core.Geometry;
 using MetalForge.Core.Model;
 using MetalForge.Core.Profiles;
+using MetalForge.Core.Railings;
+using MetalForge.Core.Standards;
+using MetalForge.Core.Structural;
 
 namespace MetalForge.Core.Stairs
 {
     [TypeConverter(typeof(Model.EnumDescriptionConverter))]
     public enum StairUsage
     {
-        [Description("Habitation")] Habitation,
-        [Description("ERP (accessibilité)")] ERP,
-        [Description("Industriel / accès machine")] Industriel
+        [Description("Habitation (intérieur d'un logement)")] Habitation,
+        [Description("Habitation collective (parties communes)")] HabitationCollective,
+        [Description("ERP neuf (accessibilité)")] ERP,
+        [Description("Industriel / accès machine (ISO 14122-3)")] Industriel
+    }
+
+    [TypeConverter(typeof(Model.EnumDescriptionConverter))]
+    public enum TreadType
+    {
+        [Description("Tôle plane")] TolePlane,
+        [Description("Tôle pliée (plis avant/arrière)")] TolePliee,
+        [Description("Caillebotis (tableau fabricant)")] Caillebotis
+    }
+
+    [TypeConverter(typeof(Model.EnumDescriptionConverter))]
+    public enum StairRailing
+    {
+        [Description("Aucun")] Aucun,
+        [Description("Côté droit")] Droite,
+        [Description("Côté gauche")] Gauche,
+        [Description("Deux côtés")] DeuxCotes
     }
 
     /// <summary>Paramètres d'un escalier droit métallique à deux limons. Cotes en mm.</summary>
@@ -44,10 +65,16 @@ namespace MetalForge.Core.Stairs
         [Category("2. Marches"), DisplayName("Module de Blondel (mm)"), Description("2h + g visé, 600 à 650 (630 conseillé).")]
         public double BlondelModule { get; set; } = 630;
 
-        [Category("2. Marches"), DisplayName("Épaisseur tôle marche (mm)"), Description("Tôle larmée / caillebotis équivalent.")]
-        public double TreadThickness { get; set; } = 6;
+        [Category("2. Marches"), DisplayName("Type de marche")]
+        public TreadType Tread { get; set; } = TreadType.TolePliee;
 
-        [Category("2. Marches"), DisplayName("Recouvrement (mm)"), Description("Débord du nez sur la marche inférieure.")]
+        [Category("2. Marches"), DisplayName("Épaisseur tôle marche (mm)"), Description("Tôle larmée / tôle pliée.")]
+        public double TreadThickness { get; set; } = 4;
+
+        [Category("2. Marches"), DisplayName("Hauteur des plis (mm)"), Description("Tôle pliée : hauteur des retours avant et arrière.")]
+        public double FoldHeight { get; set; } = 40;
+
+        [Category("2. Marches"), DisplayName("Recouvrement (mm)"), Description("Débord du nez sur la marche inférieure (≥ 10 mm en industriel).")]
         public double Nosing { get; set; } = 30;
 
         [Category("3. Limons & supports"), DisplayName("Profil limon"),
@@ -63,28 +90,48 @@ namespace MetalForge.Core.Stairs
         [Category("3. Limons & supports"), DisplayName("Profil cornière support")]
         public string TreadAngleProfile { get; set; } = "L40x40x4";
 
+        [Category("4. Garde-corps & main courante"), DisplayName("Garde-corps rampant"), Description("Généré sur le limon (pose à l'anglaise).")]
+        public StairRailing Railing { get; set; } = StairRailing.Droite;
+
+        [Category("4. Garde-corps & main courante"), DisplayName("Hauteur main courante (mm)"), Description("Mesurée à l'aplomb du nez de marche.")]
+        public double HandrailHeight { get; set; } = 900;
+
+        [Category("4. Garde-corps & main courante"), DisplayName("Profil poteau")] public string RailingPostProfile { get; set; } = "TC40x40x4";
+        [Category("4. Garde-corps & main courante"), DisplayName("Profil main courante")] public string HandrailProfile { get; set; } = "TRD42.4x2";
+        [Category("4. Garde-corps & main courante"), DisplayName("Profil barreau")] public string BalusterProfile { get; set; } = "TC20x20x1.5";
+
+        [Category("5. Résistance"), DisplayName("Nuance acier")] public SteelGrade Grade { get; set; } = SteelGrade.S235;
+
+        [Category("5. Résistance"), DisplayName("Charge d'exploitation qk (kN/m²)"),
+         Description("0 = valeur par défaut selon l'usage (2,5 logement / 4,0 ERP et industriel) — à confirmer avec NF P06-111-2.")]
+        public double LiveLoad { get; set; } = 0;
+
+        [Category("5. Résistance"), DisplayName("Charge ponctuelle Qk (kN)"), Description("Appliquée au milieu de la marche.")]
+        public double PointLoad { get; set; } = 2.0;
+
+        public double EffectiveLiveLoad => LiveLoad > 0 ? LiveLoad : (Usage == StairUsage.Habitation || Usage == StairUsage.HabitationCollective) ? 2.5 : 4.0;
+
         public StairParameters Clone() => (StairParameters)MemberwiseClone();
     }
 
     /// <summary>Géométrie calculée de l'escalier.</summary>
     public sealed class StairGeometry
     {
-        public int Risers;            // nombre de hauteurs
-        public int Treads;            // nombre de marches (arrivée = plancher)
-        public double Riser;          // h
-        public double Going;          // g (giron)
-        public double Run;            // reculement nez 1re marche → bord trémie
+        public int Risers;
+        public int Treads;
+        public double Riser;
+        public double Going;
+        public double Run;
         public double AngleDeg;
-        public double Blondel;        // 2h + g
-        public double TreadDepth;     // giron + recouvrement
-        public double Headroom = double.NaN; // échappée
+        public double Blondel;
+        public double TreadDepth;
+        public double Headroom = double.NaN;
         public double StringerLength;
-        /// <summary>Abscisse du nez de la marche i (1..Treads).</summary>
+        public double Nosing;
         public double NoseX(int i) => (i - 1) * Going - Nosing;
         public double NoseY(int i) => i * Riser;
         /// <summary>Profondeur réelle de la marche i : la dernière s'arrête au nez du palier (pas de recouvrement).</summary>
         public double DepthOf(int i) => i == Treads ? Going : TreadDepth;
-        public double Nosing;
     }
 
     public sealed class StairDesigner : IDesigner
@@ -94,6 +141,9 @@ namespace MetalForge.Core.Stairs
 
         public string Title => "Escalier droit — 2 limons";
         public object Parameters => P;
+
+        /// <summary>Hauteur de la marche (épaisseur visible) : tôle plane = épaisseur, tôle pliée = plis.</summary>
+        public double TreadDepthVertical => P.Tread == TreadType.TolePlane ? P.TreadThickness : Math.Max(P.FoldHeight, P.TreadThickness);
 
         public StairGeometry Solve()
         {
@@ -111,13 +161,12 @@ namespace MetalForge.Core.Stairs
             g.AngleDeg = Math.Atan2(g.Riser, g.Going) * 180 / Math.PI;
             g.TreadDepth = g.Going + P.Nosing;
 
-            // Échappée : hauteur libre au droit du chevêtre opposé, mesurée à la verticale du nez de marche.
             if (P.OpeningLength > 0)
             {
-                double xEdge = g.Run - P.Nosing - P.OpeningLength;   // bord de trémie côté départ
+                double xEdge = g.Run - P.Nosing - P.OpeningLength;
                 double noseLineY = g.Riser / g.Going * (xEdge + P.Nosing) + g.Riser;
                 g.Headroom = (P.FloorToFloor - P.SlabThickness) - noseLineY;
-                if (xEdge < -P.Nosing - g.Going) g.Headroom = double.PositiveInfinity; // trémie plus longue que l'escalier
+                if (xEdge < -P.Nosing - g.Going) g.Headroom = double.PositiveInfinity;
             }
             return g;
         }
@@ -125,7 +174,7 @@ namespace MetalForge.Core.Stairs
         public DesignResult Compute()
         {
             var geo = Solve();
-            var r = new DesignResult { Model = BuildModel(geo) };
+            var r = new DesignResult { Model = BuildModel(geo, out var railing) };
             r.Add("Nombre de hauteurs", geo.Risers.ToString());
             r.Add("Nombre de marches", geo.Treads.ToString());
             r.Add("Hauteur de marche h", $"{geo.Riser:0.0} mm");
@@ -138,46 +187,64 @@ namespace MetalForge.Core.Stairs
             if (!double.IsNaN(geo.Headroom))
                 r.Add("Échappée", double.IsInfinity(geo.Headroom) ? "dégagée" : $"{geo.Headroom:0} mm");
             r.Checks.AddRange(Verify(geo));
+            r.Checks.AddRange(VerifyStrength(geo, r));
+            if (railing != null)
+                foreach (var c in railing.Checks.Where(c => c.Level != CheckLevel.Ok || c.Rule.StartsWith("Résistance")))
+                    r.Checks.Add(new Check { Level = c.Level, Rule = "Garde-corps rampant — " + c.Rule, Message = c.Message, Reference = c.Reference });
+            r.Checks.Add(Check.Info("Exécution", "Escalier = ouvrage porteur : fabrication selon NF EN 1090-2, classe EXC2 par défaut (marquage CE si mis sur le marché).", Norms.Execution));
             return r;
         }
 
         public IEnumerable<Check> Verify(StairGeometry g)
         {
             const string blondel = "Loi de Blondel";
-            if (g.Blondel >= 600 && g.Blondel <= 650) yield return Check.Ok(blondel, $"2h+g = {g.Blondel:0} mm (600–650)");
-            else if (g.Blondel >= 580 && g.Blondel <= 660) yield return Check.Warn(blondel, $"2h+g = {g.Blondel:0} mm, hors plage de confort 600–650");
-            else yield return Check.Fail(blondel, $"2h+g = {g.Blondel:0} mm, escalier inconfortable");
+            bool ind = P.Usage == StairUsage.Industriel;
+            double bMin = 600, bMax = ind ? 660 : 650;
+            if (g.Blondel >= bMin && g.Blondel <= bMax) yield return Check.Ok(blondel, $"2h+g = {g.Blondel:0} mm ({bMin:0}–{bMax:0})", ind ? Norms.AccesMachines3 : null);
+            else if (!ind && g.Blondel >= 580 && g.Blondel <= 660) yield return Check.Warn(blondel, $"2h+g = {g.Blondel:0} mm, hors plage de confort 600–650");
+            else yield return Check.Fail(blondel, $"2h+g = {g.Blondel:0} mm hors {bMin:0}–{bMax:0} mm", ind ? Norms.AccesMachines3 : null);
 
             switch (P.Usage)
             {
                 case StairUsage.Habitation:
-                    yield return Range("Hauteur de marche", g.Riser, 150, 200, 210, "mm", "DTU / usage courant");
-                    yield return g.Going >= 240 ? Check.Ok("Giron", $"{g.Going:0} mm ≥ 240")
-                               : g.Going >= 210 ? Check.Warn("Giron", $"{g.Going:0} mm : acceptable, 240 mm conseillé")
-                               : Check.Fail("Giron", $"{g.Going:0} mm < 210 mm");
-                    yield return P.Width >= 800 ? Check.Ok("Emmarchement", $"{P.Width:0} mm")
-                               : Check.Warn("Emmarchement", $"{P.Width:0} mm < 800 mm conseillé");
-                    yield return g.AngleDeg <= 42 ? Check.Ok("Inclinaison", $"{g.AngleDeg:0.0}°")
-                               : Check.Warn("Inclinaison", $"{g.AngleDeg:0.0}° > 42° : escalier raide");
+                {
+                    string lg = Norms.AccessibiliteLogement + ", art. 12";
+                    yield return g.Riser <= 180 ? Check.Ok("Hauteur de marche", $"{g.Riser:0.0} mm ≤ 180", lg) : Check.Fail("Hauteur de marche", $"{g.Riser:0.0} mm > 180 mm", lg);
+                    yield return g.Going >= 240 ? Check.Ok("Giron", $"{g.Going:0} mm ≥ 240", lg) : Check.Fail("Giron", $"{g.Going:0} mm < 240 mm", lg);
+                    yield return P.Width >= 800 ? Check.Ok("Emmarchement", $"{P.Width:0} mm ≥ 800", lg) : Check.Fail("Emmarchement", $"{P.Width:0} mm < 800 mm", lg);
+                    yield return g.AngleDeg <= 42 ? Check.Ok("Inclinaison", $"{g.AngleDeg:0.0}°") : Check.Warn("Inclinaison", $"{g.AngleDeg:0.0}° > 42° : escalier raide");
                     break;
+                }
+                case StairUsage.HabitationCollective:
+                {
+                    string lg = Norms.AccessibiliteLogement;
+                    yield return g.Riser <= 170 ? Check.Ok("Hauteur de marche", $"{g.Riser:0.0} mm ≤ 170", lg) : Check.Fail("Hauteur de marche", $"{g.Riser:0.0} mm > 170 mm", lg);
+                    yield return g.Going >= 280 ? Check.Ok("Giron", $"{g.Going:0} mm ≥ 280", lg) : Check.Fail("Giron", $"{g.Going:0} mm < 280 mm", lg);
+                    yield return P.Railing != StairRailing.Aucun ? Check.Ok("Main courante", "présente", lg) : Check.Fail("Main courante", "obligatoire en parties communes", lg);
+                    break;
+                }
                 case StairUsage.ERP:
-                    const string acc = "Arrêté du 20/04/2017 (accessibilité ERP)";
-                    yield return g.Riser <= 160 ? Check.Ok("Hauteur de marche", $"{g.Riser:0} mm ≤ 160", acc)
-                               : Check.Fail("Hauteur de marche", $"{g.Riser:0} mm > 160 mm", acc);
-                    yield return g.Going >= 280 ? Check.Ok("Giron", $"{g.Going:0} mm ≥ 280", acc)
-                               : Check.Fail("Giron", $"{g.Going:0} mm < 280 mm", acc);
-                    yield return P.Width >= 1200 ? Check.Ok("Largeur", $"{P.Width:0} mm ≥ 1200", acc)
-                               : Check.Fail("Largeur", $"{P.Width:0} mm < 1200 mm entre mains courantes", acc);
+                {
+                    string acc = Norms.AccessibiliteErp;
+                    yield return g.Riser <= 160 ? Check.Ok("Hauteur de marche", $"{g.Riser:0} mm ≤ 160", acc) : Check.Fail("Hauteur de marche", $"{g.Riser:0} mm > 160 mm", acc);
+                    yield return g.Going >= 280 ? Check.Ok("Giron", $"{g.Going:0} mm ≥ 280", acc) : Check.Fail("Giron", $"{g.Going:0} mm < 280 mm", acc);
+                    yield return P.Width >= 1200 ? Check.Ok("Largeur", $"{P.Width:0} mm ≥ 1200", acc) : Check.Fail("Largeur", $"{P.Width:0} mm < 1200 mm entre mains courantes", acc);
+                    yield return P.Railing == StairRailing.DeuxCotes ? Check.Ok("Mains courantes", "des deux côtés", acc)
+                               : Check.Fail("Mains courantes", "obligatoires des deux côtés en ERP neuf", acc);
+                    yield return P.HandrailHeight >= 800 && P.HandrailHeight <= 1000 ? Check.Ok("Hauteur main courante", $"{P.HandrailHeight:0} mm (800–1000)", acc)
+                               : Check.Fail("Hauteur main courante", $"{P.HandrailHeight:0} mm hors 800–1000 mm", acc);
+                    yield return Check.Info("Prolongement", $"Prolonger les mains courantes horizontalement d'un giron ({g.Going:0} mm) en haut et en bas ; contremarches 1re et dernière marche et nez de marche contrastés.", acc);
                     break;
+                }
                 case StairUsage.Industriel:
-                    const string nfe = "NF E 85-015 (valeurs à confirmer selon édition)";
-                    yield return g.AngleDeg >= 30 && g.AngleDeg <= 45 ? Check.Ok("Inclinaison", $"{g.AngleDeg:0.0}° (30–45°)", nfe)
-                               : Check.Fail("Inclinaison", $"{g.AngleDeg:0.0}° hors 30–45°", nfe);
-                    yield return P.Width >= 600 ? Check.Ok("Largeur", $"{P.Width:0} mm ≥ 600", nfe)
-                               : Check.Fail("Largeur", $"{P.Width:0} mm < 600 mm", nfe);
-                    yield return g.Riser <= 250 ? Check.Ok("Hauteur de marche", $"{g.Riser:0} mm", nfe)
-                               : Check.Fail("Hauteur de marche", $"{g.Riser:0} mm > 250 mm", nfe);
+                {
+                    string iso = Norms.AccesMachines3;
+                    yield return g.AngleDeg >= 30 && g.AngleDeg <= 38 ? Check.Ok("Inclinaison", $"{g.AngleDeg:0.0}° (30–38°)", iso)
+                               : Check.Fail("Inclinaison", $"{g.AngleDeg:0.0}° hors 30–38° (au-delà : échelle à marches)", iso);
+                    yield return P.Nosing >= 10 ? Check.Ok("Recouvrement", $"{P.Nosing:0} mm ≥ 10", iso) : Check.Fail("Recouvrement", $"{P.Nosing:0} mm < 10 mm", iso);
+                    yield return P.Width >= 600 ? Check.Ok("Largeur", $"{P.Width:0} mm") : Check.Warn("Largeur", $"{P.Width:0} mm < 600 mm (valeur usuelle, à confirmer)", iso);
                     break;
+                }
             }
 
             if (!double.IsNaN(g.Headroom) && !double.IsInfinity(g.Headroom))
@@ -185,15 +252,53 @@ namespace MetalForge.Core.Stairs
                            : g.Headroom >= 1900 ? Check.Warn("Échappée", $"{g.Headroom:0} mm : tolérable, 2000 mm conseillé")
                            : Check.Fail("Échappée", $"{g.Headroom:0} mm < 1900 mm : allonger la trémie");
 
-            if (g.Risers >= 4)
-                yield return Check.Warn("Garde-corps / main courante", "Prévoir main courante et garde-corps côté vide (module Garde-corps, mode rampant).", "NF P01-012");
+            if (P.Railing == StairRailing.Aucun)
+                yield return Check.Warn("Garde-corps", "Aucun garde-corps : obligatoire côté vide (rampant ≥ 900 mm à l'aplomb du nez).", Norms.GardeCorps);
+            else if (P.Usage != StairUsage.Industriel)
+                yield return P.HandrailHeight >= 900 ? Check.Ok("Hauteur rampant", $"{P.HandrailHeight:0} mm ≥ 900 à l'aplomb du nez", Norms.GardeCorps)
+                           : Check.Fail("Hauteur rampant", $"{P.HandrailHeight:0} mm < 900 mm", Norms.GardeCorps);
         }
 
-        private static Check Range(string rule, double v, double min, double max, double hardMax, string unit, string reference)
+        /// <summary>Limons : poutre bi-appuyée en projection horizontale. Marches : poutre sur deux appuis (emmarchement).</summary>
+        private IEnumerable<Check> VerifyStrength(StairGeometry g, DesignResult r)
         {
-            if (v >= min && v <= max) return Check.Ok(rule, $"{v:0.0} {unit}", reference);
-            if (v <= hardMax && v >= min - 10) return Check.Warn(rule, $"{v:0.0} {unit} (conseillé {min}–{max})", reference);
-            return Check.Fail(rule, $"{v:0.0} {unit} hors limites", reference);
+            double qk = P.EffectiveLiveLoad * 1e-3;     // N/mm²
+            var o = StringerOutline(g);
+            double lh = o.TopEnd.X - o.BottomStart.X;    // portée horizontale
+            double ls = lh / Math.Cos(g.AngleDeg * Math.PI / 180);
+            var sp = ProfileCatalog.Get(P.StringerProfile);
+            var ss = SectionProperties.Of(sp);
+            double gk = r.Model.TotalMass * 9.81 / 2 / lh;           // N/mm horizontal, par limon
+            double qkl = qk * P.Width / 2;                           // N/mm horizontal, par limon
+            double pEd = SteelCheck.GammaG * gk + SteelCheck.GammaQ * qkl;
+            double mEd = pEd * lh * lh / 8;
+            double c2 = Math.Pow(Math.Cos(g.AngleDeg * Math.PI / 180), 2);
+            double delta = 5 * (gk + qkl) * c2 * Math.Pow(ls, 4) / (384 * SteelCheck.E * ss.Iy);
+            r.Add("Charge d'exploitation", $"{P.EffectiveLiveLoad:0.0} kN/m² + {P.PointLoad:0.0} kN ponctuel");
+            r.Add("Moment ELU par limon", $"{mEd / 1e6:0.00} kN·m");
+            r.Add("Flèche limon (ELS)", $"{delta:0.0} mm");
+            yield return Check.Info("Hypothèses de charge", $"qk = {P.EffectiveLiveLoad:0.0} kN/m², Qk = {P.PointLoad:0.0} kN, poids propre {r.Model.TotalMass:0} kg ; γG = 1,35, γQ = 1,5", "NF EN 1991-1-1 / NF P06-111-2 (à confirmer)");
+            yield return SteelCheck.Bending("Résistance limon", mEd, ss.Wy, P.Grade);
+            yield return SteelCheck.Deflection("Flèche limon", delta, ls, 300, "critère usuel L/300");
+
+            if (P.Tread == TreadType.Caillebotis)
+            {
+                yield return Check.Info("Marches caillebotis", "Vérifier la portée admissible dans le tableau du fabricant (charge, maille, hauteur de porteur).");
+                yield break;
+            }
+            double d = g.TreadDepth, t = P.TreadThickness, span = P.Width;
+            var ts = P.Tread == TreadType.TolePlane
+                ? SectionProperties.Composite((0, 0, d, t))
+                : SectionProperties.Composite((0, 0, d, t), (0, t, t, P.FoldHeight - t), (d - t, t, t, P.FoldHeight - t));
+            double mU = SteelCheck.GammaQ * qk * d * span * span / 8;
+            double mQ = SteelCheck.GammaQ * P.PointLoad * 1000 * span / 4;
+            double dQ = P.PointLoad * 1000 * Math.Pow(span, 3) / (48 * SteelCheck.E * ts.Iy);
+            r.Add("Flèche marche sous Qk", $"{dQ:0.0} mm");
+            yield return SteelCheck.Bending("Résistance marche", Math.Max(mU, mQ), ts.Wy, P.Grade);
+            var dc = SteelCheck.Deflection("Flèche marche (Qk au centre)", dQ, span, 250, "critère usuel L/250");
+            if (dc.Level == CheckLevel.NonConforme && P.Tread == TreadType.TolePlane)
+                dc.Message += " — passer en tôle pliée ou ajouter un raidisseur";
+            yield return dc;
         }
 
         // ---------------------------------------------------------------------------------------
@@ -205,12 +310,12 @@ namespace MetalForge.Core.Stairs
             var prof = ProfileCatalog.Get(P.StringerProfile);
             double tan = g.Riser / g.Going;
             double cos = Math.Cos(Math.Atan(tan));
-            double xA = -g.Going - P.Nosing;               // ligne de nez : y = tan * (x - xA)
-            double top = P.StringerAboveNosing;              // décalage vertical rive haute / ligne de nez
-            double bottom = top - prof.SectionHeight / cos;  // décalage vertical rive basse
-            double xEnd = g.Run - P.Nosing;                  // about haut contre le chevêtre
+            double xA = -g.Going - P.Nosing;
+            double top = P.StringerAboveNosing;
+            double bottom = top - prof.SectionHeight / cos;
+            double xEnd = g.Run - P.Nosing;
 
-            Func<double, double, double> xAtY = (y, off) => y / tan + xA - off / tan; // x tel que tan(x-xA)+off = y
+            Func<double, double, double> xAtY = (y, off) => y / tan + xA - off / tan;
             Func<double, double, double> yAtX = (x, off) => tan * (x - xA) + off;
 
             var o = new StringerOutline
@@ -228,7 +333,7 @@ namespace MetalForge.Core.Stairs
             return o;
         }
 
-        private StructureModel BuildModel(StairGeometry g)
+        private StructureModel BuildModel(StairGeometry g, out DesignResult railingResult)
         {
             var m = new StructureModel { Name = $"Escalier droit {g.Treads} marches — H{P.FloorToFloor:0}" };
             var sp = ProfileCatalog.Get(P.StringerProfile);
@@ -238,14 +343,10 @@ namespace MetalForge.Core.Stairs
             foreach (var side in new[] { -1, 1 })
             {
                 if (sp.Family == ProfileFamily.Plat)
-                {
-                    // Limon tôle découpé : contour exact (coupes d'aplomb), à débiter au laser.
                     m.AddPlate("LIM", "Limon tôle", new[] { outline.BottomStart, outline.BottomEnd, outline.TopEnd, outline.TopStart },
                                sp.T, side * zLim, sp.T);
-                }
                 else
                 {
-                    // Limon profilé : membre suivant l'axe, coupes d'about à reprendre (Ajuster/Prolonger).
                     double off = outline.AxisOffset;
                     double x0 = (0 - off) / outline.Tan + outline.XA;
                     var a = new Vec3(x0, 0, side * zLim);
@@ -256,17 +357,42 @@ namespace MetalForge.Core.Stairs
             g.StringerLength = (outline.TopEnd - outline.TopStart).Length;
 
             var ap = P.TreadAngles ? ProfileCatalog.Get(P.TreadAngleProfile) : null;
+            double t = P.TreadThickness, hv = TreadDepthVertical;
             for (int i = 1; i <= g.Treads; i++)
             {
-                double x1 = g.NoseX(i), x2 = x1 + g.DepthOf(i), yTop = g.NoseY(i), yBot = yTop - P.TreadThickness;
-                m.AddPlate("M", "Marche", new[] { new Vec3(x1, yBot, 0), new Vec3(x2, yBot, 0), new Vec3(x2, yTop, 0), new Vec3(x1, yTop, 0) },
-                           P.Width - 4, 0, P.TreadThickness);
+                double x1 = g.NoseX(i), x2 = x1 + g.DepthOf(i), yTop = g.NoseY(i);
+                IEnumerable<Vec3> poly = P.Tread == TreadType.TolePliee
+                    ? new[] { new Vec3(x1, yTop, 0), new Vec3(x2, yTop, 0), new Vec3(x2, yTop - hv, 0), new Vec3(x2 - t, yTop - hv, 0),
+                              new Vec3(x2 - t, yTop - t, 0), new Vec3(x1 + t, yTop - t, 0), new Vec3(x1 + t, yTop - hv, 0), new Vec3(x1, yTop - hv, 0) }
+                    : new[] { new Vec3(x1, yTop - hv, 0), new Vec3(x2, yTop - hv, 0), new Vec3(x2, yTop, 0), new Vec3(x1, yTop, 0) };
+                m.AddPlate("M", "Marche", poly, P.Width - 4, 0, t);
                 if (ap != null)
                 {
-                    double y = yBot - ap.H / 2, z = P.Width / 2 - ap.B / 2;
+                    double yUnder = P.Tread == TreadType.TolePliee ? yTop - t : yTop - hv;
+                    double y = yUnder - ap.H / 2, z = P.Width / 2 - ap.B / 2;
                     foreach (var side in new[] { -1, 1 })
                         m.AddMember("C", "Cornière support", P.TreadAngleProfile, new Vec3(x1 + 10, y, side * z), new Vec3(x2 - 10, y, side * z));
                 }
+            }
+
+            railingResult = null;
+            if (P.Railing != StairRailing.Aucun)
+            {
+                var post = ProfileCatalog.Get(P.RailingPostProfile);
+                var rd = new RailingDesigner(new RailingParameters
+                {
+                    Use = P.Usage == StairUsage.Industriel ? RailingUse.Industriel : P.Usage == StairUsage.ERP ? RailingUse.Public : RailingUse.Prive,
+                    Slope = RailingSlope.Rampant, SlopeDeg = g.AngleDeg, Length = g.Run, Height = P.HandrailHeight,
+                    Mounting = RailingMounting.Anglaise, SideMountDrop = Math.Min(150, sp.SectionHeight * 0.6), BasePlates = false,
+                    PostProfile = P.RailingPostProfile, HandrailProfile = P.HandrailProfile, BottomRailProfile = "TR40x20x2",
+                    InfillProfile = P.BalusterProfile,
+                    Infill = P.Usage == StairUsage.Industriel ? RailingInfill.Industriel : RailingInfill.BarreauxVerticaux
+                });
+                railingResult = rd.Compute();
+                double zr = P.Width / 2 + sp.WidthAcross + post.WidthAcross / 2;
+                var sides = P.Railing == StairRailing.DeuxCotes ? new[] { -1, 1 } : P.Railing == StairRailing.Droite ? new[] { 1 } : new[] { -1 };
+                foreach (var s in sides)
+                    m.Merge(railingResult.Model, new Vec3(g.NoseX(1), g.NoseY(1), s * zr));
             }
             return m;
         }

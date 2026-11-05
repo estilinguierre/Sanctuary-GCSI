@@ -135,7 +135,7 @@ namespace MetalForge.Core.Tests
         public void Horizontal_infill_warns_about_climbing()
         {
             var r = new RailingDesigner(new RailingParameters { Infill = RailingInfill.LissesHorizontales }).Compute();
-            Assert.Contains(r.Checks, c => c.Rule == "Escaladabilité");
+            Assert.Contains(r.Checks, c => c.Rule.StartsWith("Zone basse") && c.Level == CheckLevel.NonConforme);
             Assert.Contains(r.Model.Members, m => m.Role == "Lisse intermédiaire");
         }
     }

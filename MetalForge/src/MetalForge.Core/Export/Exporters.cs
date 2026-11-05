@@ -129,7 +129,7 @@ namespace MetalForge.Core.Export
             {
                 i++;
                 dxf.Line(front, back, "TRACAGE");
-                dxf.Line(new Vec3(front.X, front.Y - designer.P.TreadThickness, 0), new Vec3(back.X, back.Y - designer.P.TreadThickness, 0), "TRACAGE");
+                dxf.Line(new Vec3(front.X, front.Y - designer.TreadDepthVertical, 0), new Vec3(back.X, back.Y - designer.TreadDepthVertical, 0), "TRACAGE");
                 dxf.Text(new Vec3(front.X + 5, front.Y + 5, 0), "M" + i, 12);
             }
             dxf.Text(new Vec3(o.BottomStart.X, -60, 0),

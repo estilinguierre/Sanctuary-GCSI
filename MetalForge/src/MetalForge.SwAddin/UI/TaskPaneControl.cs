@@ -18,8 +18,9 @@ namespace MetalForge.SwAddin.UI
 
             Section(layout, "Ouvrages paramétriques");
             Add(layout, "Escalier droit", "Blondel, échappée, limons, marches", addin.OnStair);
-            Add(layout, "Garde-corps", "NF P01-012, droit ou rampant", addin.OnRailing);
+            Add(layout, "Garde-corps", "NF P01-012:2024, privé / ERP / industriel", addin.OnRailing);
             Add(layout, "Portail / clôture", "Battant, coulissant, panneaux", addin.OnGate);
+            Add(layout, "Échelle à crinoline", "NF E85-016, ISO 14122-4", addin.OnLadder);
 
             Section(layout, "Fabrication");
             Add(layout, "Débit & devis (pièce active)", "Liste des pièces soudées → barres", addin.OnCutList);

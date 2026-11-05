@@ -96,6 +96,19 @@ namespace MetalForge.Core.Model
             return p;
         }
 
+        /// <summary>Ajoute une copie translatée d'un autre modèle (repères renumérotés).</summary>
+        public void Merge(StructureModel other, Vec3 offset)
+        {
+            foreach (var m in other.Members)
+            {
+                var c = AddMember(new string(m.Mark.TakeWhile(char.IsLetter).ToArray()), m.Role, m.ProfileId, m.Start + offset, m.End + offset, m.RotationDeg);
+                c.CutAllowance = m.CutAllowance;
+            }
+            foreach (var p in other.Plates)
+                AddPlate(new string(p.Mark.TakeWhile(char.IsLetter).ToArray()), p.Role,
+                         p.Outline.Select(v => new Vec3(v.X + offset.X, v.Y + offset.Y, 0)), p.Depth, p.ZCenter + offset.Z, p.Thickness);
+        }
+
         private string NextMark(string prefix)
         {
             _counters.TryGetValue(prefix, out var n);

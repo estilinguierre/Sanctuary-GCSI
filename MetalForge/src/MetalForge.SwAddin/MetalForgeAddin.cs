@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using MetalForge.Core.Gates;
+using MetalForge.Core.Ladders;
 using MetalForge.Core.Model;
 using MetalForge.Core.Railings;
 using MetalForge.Core.Stairs;
@@ -26,7 +27,7 @@ namespace MetalForge.SwAddin
     public sealed class MetalForgeAddin : ISwAddin
     {
         public const string Title = "MetalForge";
-        private const string Summary = "Métallerie-serrurerie : escaliers, garde-corps, portails, débit optimisé et devis";
+        private const string Summary = "Métallerie-serrurerie : escaliers, garde-corps, portails, échelles, débit optimisé, devis et notes de calcul";
         private const int MainGroupId = 7351;
 
         private ISldWorks _sw;
@@ -40,6 +41,7 @@ namespace MetalForge.SwAddin
             ("Escalier",      "Escalier droit métallique (Blondel, échappée, limons)", nameof(OnStair),    nameof(EnableAlways), IconFactory.Glyph.Stair),
             ("Garde-corps",   "Garde-corps NF P01-012 droit ou rampant",               nameof(OnRailing),  nameof(EnableAlways), IconFactory.Glyph.Railing),
             ("Portail",       "Portail battant / coulissant / clôture",                nameof(OnGate),     nameof(EnableAlways), IconFactory.Glyph.Gate),
+            ("Échelle",       "Échelle fixe à crinoline (NF E85-016 / ISO 14122-4)",   nameof(OnLadder),   nameof(EnableAlways), IconFactory.Glyph.Ladder),
             ("Débit & devis", "Optimisation de débit et chiffrage de la pièce active", nameof(OnCutList),  nameof(EnableIfPart), IconFactory.Glyph.CutList),
             ("Profilés",      "Bibliothèque de profilés",                              nameof(OnProfiles), nameof(EnableAlways), IconFactory.Glyph.Profiles),
             ("Réglages",      "Dossiers de profils, débit, prix",                      nameof(OnSettings), nameof(EnableAlways), IconFactory.Glyph.Settings),
@@ -152,6 +154,7 @@ namespace MetalForge.SwAddin
         public void OnStair() => Safe(() => RunDesigner(new StairDesigner()));
         public void OnRailing() => Safe(() => RunDesigner(new RailingDesigner()));
         public void OnGate() => Safe(() => RunDesigner(new GateDesigner()));
+        public void OnLadder() => Safe(() => RunDesigner(new LadderDesigner()));
 
         public void OnCutList() => Safe(() =>
         {

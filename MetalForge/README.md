@@ -16,9 +16,12 @@ escaliers, garde-corps, portails, débit optimisé des barres, nomenclature et d
 
 | Module | Ce qu'il fait | Sorties |
 |---|---|---|
-| 🪜 **Escalier droit** | Nombre de marches, hauteur/giron, **loi de Blondel** (2h+g), reculement imposé ou calculé, **échappée** sous trémie, limons tôle (contour exact) ou profilés (UPN, tubes), cornières support | Pièce mécano-soudée 3D, **DXF de traçage du limon**, rapport de conformité |
-| 🛡️ **Garde-corps** | Droit ou **rampant**, pose à la française / à l'anglaise, entraxe poteaux, barreaudage ou lisses, vides **≤ 110 mm**, platines | Pièce 3D, vérifs **NF P01-012** |
-| 🚪 **Portail / clôture** | Battant 1 ou 2 vantaux, **coulissant autoportant** (queue + écharpe), panneau de clôture, traverses, barreaux traversants, piliers | Pièce 3D, masse par vantail (gonds, motorisation) |
+| 🪜 **Escalier droit** | Loi de Blondel, échappée, règles **par usage** (logement, collectif, **ERP neuf**, **industriel 30–38°**), limons tôle ou profilés, marches **tôle pliée**, garde-corps rampant intégré, **résistance des limons et des marches** | Pièce mécano-soudée 3D, **DXF de traçage du limon**, rapport de conformité |
+| 🛡️ **Garde-corps** | Usage privé / ERP / **industriel** (lisse + sous-lisse + plinthe), droit ou **rampant**, pose à la française / à l'anglaise, **NF P01-012:2024** (zone basse 600 mm, gabarit T1 110 mm), **résistance** des poteaux et de la main courante (0,6 / 1,0 kN/m), effort par cheville | Pièce 3D, vérifs normatives + calcul |
+| 🚪 **Portail / clôture** | Battant 1 ou 2 vantaux, **coulissant autoportant** (queue + écharpe), panneau de clôture, **efforts sur les gonds**, sécurité motorisation (doigts 25 mm, cisaillement au pilier) | Pièce 3D, masse par vantail |
+| 🪜 **Échelle à crinoline** | Pas d'échelons constant, crinoline (arceaux, filants), pattes murales, contrôle volée / paliers (NF E85-016, ISO 14122-4) | Pièce 3D, vérifs |
+| 📄 **Note de calcul** | Dossier HTML imprimable en PDF : vue, résultats, vérifications, nomenclature, plan de débit, devis, trous d'évent, **textes de référence avec sources** | Fichier HTML |
+| 🔥 **Galvanisation** | Trous d'évent par profil creux (NF EN ISO 14713-2) | Onglet + note |
 | ✂️ **Débit optimisé** | Optimisation 1D des barres (Best Fit Decreasing), trait de scie, équerrage, **réemploi des chutes** en stock, alerte aboutage | Plan de débit, CSV atelier |
 | 📋 **Liste des pièces soudées** | Lecture de la cut-list SolidWorks de **n'importe quelle pièce mécano-soudée** (même non créée par MetalForge), reconnaissance automatique des profils | Débit + devis du modèle actif |
 | 💶 **Devis** | Matière achetée (chutes incluses), tôle + laser, temps de coupe/soudure/meulage, peinture / thermolaquage / galva, pose, marge, TVA | Estimation détaillée HT/TTC |
@@ -27,9 +30,13 @@ escaliers, garde-corps, portails, débit optimisé des barres, nomenclature et d
 
 Toutes les fenêtres recalculent **en direct** : on modifie un paramètre → aperçu, conformité, débit et prix se mettent à jour.
 
-| Garde-corps rampant | Portail coulissant autoportant |
+| Garde-corps industriel (ISO 14122-3) | Portail coulissant autoportant |
 |---|---|
-| ![Garde-corps rampant](docs/images/garde-corps-rampant.svg) | ![Portail coulissant](docs/images/portail-coulissant.svg) |
+| ![Garde-corps industriel](docs/images/garde-corps-industriel.svg) | ![Portail coulissant](docs/images/portail-coulissant.svg) |
+
+| Échelle à crinoline | Garde-corps rampant |
+|---|---|
+| ![Échelle](docs/images/echelle-crinoline.svg) | ![Garde-corps rampant](docs/images/garde-corps-rampant.svg) |
 
 ---
 
@@ -57,7 +64,7 @@ flowchart LR
 ```
 
 - **`MetalForge.Core`** — tout le calcul métier, sans dépendance à SolidWorks : testable, réutilisable
-  (application autonome, service web…). **42 tests unitaires.**
+  (application autonome, service web…). **71 tests unitaires.**
 - **`MetalForge.SwAddin`** — le complément COM (.NET Framework 4.8, x64) : commandes, fenêtres WinForms,
   génération de la géométrie via l'API SolidWorks.
 
@@ -70,7 +77,11 @@ Repère utilisé : **X** = longueur / sens de montée, **Y** = vertical, **Z** =
  │   ├─ Stairs/        escalier droit (Blondel, échappée, limons)
  │   ├─ Railings/      garde-corps (NF P01-012)
  │   ├─ Gates/         portails, clôtures
- │   ├─ Fabrication/   débit optimisé
+ │   ├─ Ladders/       échelles à crinoline
+ │   ├─ Structural/    vérifications Eurocode 3 (pré-dimensionnement)
+ │   ├─ Standards/     registre des normes + sources
+ │   ├─ Reports/       note de calcul HTML
+ │   ├─ Fabrication/   débit optimisé, trous d'évent galvanisation
  │   ├─ Costing/       devis
  │   └─ Export/        CSV, DXF, SVG
  └─ MetalForge.SwAddin/
@@ -126,15 +137,22 @@ La fenêtre **Profilés** indique pour chaque profilé s'il est trouvé (✓) ou
 
 ## ⚖️ Règles vérifiées
 
+➡️ Détail, valeurs, niveau de fiabilité et sources : **[docs/NORMES.md](docs/NORMES.md)** — exemples de notes de calcul dans [docs/exemples](docs/exemples).
+
 | Ouvrage | Règle | Référence |
 |---|---|---|
 | Escalier | 600 ≤ 2h + g ≤ 650 mm | Loi de Blondel |
 | Escalier habitation | h 150–200 mm, g ≥ 240 mm (210 mini), emmarchement ≥ 800 mm, pente ≤ 42° | Usages / DTU |
-| Escalier ERP | h ≤ 160 mm, g ≥ 280 mm, largeur ≥ 1 200 mm | Arrêté du 20/04/2017 |
-| Escalier industriel | pente 30–45°, largeur ≥ 600 mm | NF E 85-015 *(à confirmer selon l'édition)* |
+| Escalier ERP neuf | h ≤ 160 mm, g ≥ 280 mm, largeur ≥ 1 200 mm, mains courantes 2 côtés 800–1000 mm | Arrêté du 20/04/2017 |
+| Escalier logement | intérieur : h ≤ 180, g ≥ 240, l ≥ 800 ; collectif : h ≤ 170, g ≥ 280 | Arrêté du 24/12/2015 |
+| Escalier industriel | pente **30–38°**, 600 ≤ g+2h ≤ 660, recouvrement ≥ 10 mm | NF EN ISO 14122-3 |
+| Limons / marches | contrainte ≤ fy, flèche L/300 (limon), L/250 (marche) | NF EN 1993-1-1 |
 | Escalier | échappée ≥ 2 000 mm (1 900 toléré) | Usage |
-| Garde-corps | H ≥ 1 000 mm (900 en rampant), vides ≤ 110 mm, jeu bas ≤ 110 mm, escaladabilité | NF P01-012 |
-| Portail | vides barreaux, masse vantail, queue autoportant ≥ 40 % | Bonne pratique, NF EN 12453 si motorisé |
+| Garde-corps | H ≥ 1 000 mm (800 si épaisseur ≥ 500, 900 en rampant), gabarit T1 110 mm, jeu bas ≤ 110 mm, **zone basse 0–600 mm** non escaladable | NF P01-012:2024 |
+| Garde-corps (charges) | 0,6 kN/m privé, 1,0 kN/m public ; poteau, main courante, chevilles | NF P06-111-2/A1, NF EN 1993-1-1 |
+| Garde-corps industriel | lisse 1000–1100 mm, sous-lisse (vides ≤ 500), plinthe ≥ 100 mm | NF EN ISO 14122-3 |
+| Échelle fixe | pas 225–300, largeur 400–600, crinoline 2,2–3 m, arceaux ≤ 1,5 m, filants < 300, volée ≤ 8 m | NF E85-016 / ISO 14122-4 |
+| Portail | vides barreaux, masse vantail, gonds, queue autoportant ≥ 40 %, jeux ≥ 25 mm si motorisé | NF EN ISO 13854, NF EN 12604 / 12453 |
 
 > ⚠️ Ces contrôles sont une **aide à la conception**. Ils ne remplacent ni la lecture des normes en vigueur,
 > ni une note de calcul de résistance (poussée sur garde-corps NF P06-111-2, flèche des limons, etc.).
@@ -155,6 +173,7 @@ Le complément SolidWorks nécessite Windows et une licence SolidWorks pour êtr
 ## 🗺️ Évolutions prévues
 
 - Escaliers **quart tournant / hélicoïdaux**, paliers, marches balancées
+- Paliers de repos et volées décalées pour les échelles > 8 m
 - Garde-corps **vitrés** (pinces, profils U) et câbles inox
 - **Mise en plan automatique** (vues, nomenclature, bulles) et fiches de débit PDF
 - Export **DSTV/NC1** pour scies et lignes de perçage CNC

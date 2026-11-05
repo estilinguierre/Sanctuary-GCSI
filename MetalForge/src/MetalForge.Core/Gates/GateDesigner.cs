@@ -35,6 +35,11 @@ namespace MetalForge.Core.Gates
         [Category("2. Profilés"), DisplayName("Barreau")] public string BarProfile { get; set; } = "TC20x20x1.5";
         [Category("2. Profilés"), DisplayName("Vide max entre barreaux (mm)")] public double MaxOpening { get; set; } = 110;
 
+        [Category("4. Quincaillerie & sécurité"), DisplayName("Motorisé"), Description("Active les contrôles NF EN 12453 / NF EN 12604.")]
+        public bool Motorized { get; set; } = false;
+        [Category("4. Quincaillerie & sécurité"), DisplayName("Entraxe des gonds (mm)"), Description("0 = hauteur du vantail - 200 mm.")]
+        public double HingeSpacing { get; set; } = 0;
+
         [Category("3. Piliers"), DisplayName("Piliers acier")] public bool Posts { get; set; } = true;
         [Category("3. Piliers"), DisplayName("Profil pilier")] public string PostProfile { get; set; } = "TC100x100x4";
         [Category("3. Piliers"), DisplayName("Dépassement pilier (mm)")] public double PostAboveGate { get; set; } = 100;
@@ -84,6 +89,11 @@ namespace MetalForge.Core.Gates
                 r.Add($"Vantail {leafIndex} : masse", $"{mass:0.0} kg");
                 if (P.Type == GateType.Battant1 || P.Type == GateType.Battant2)
                 {
+                    // Gonds : le vantail en console crée un couple équilibré par les deux gonds (H = W·b / a)
+                    double wN = mass * 9.81, a = P.HingeSpacing > 0 ? P.HingeSpacing : P.Height - 200;
+                    double hR = wN * (lw / 2) / Math.Max(a, 100);
+                    r.Add($"Vantail {leafIndex} : effort horizontal par gond", $"{hR / 1000:0.00} kN (gond haut tiré, gond bas poussé)");
+                    r.Add($"Vantail {leafIndex} : effort vertical (gond bas)", $"{wN / 1000:0.00} kN");
                     if (lw > 2500) r.Checks.Add(Check.Warn("Largeur vantail", $"{lw:0} mm > 2500 : risque d'affaissement, prévoir écharpe ou roulette."));
                     if (mass > 200) r.Checks.Add(Check.Warn("Masse vantail", $"{mass:0} kg : vérifier gonds et motorisation."));
                 }
@@ -106,7 +116,19 @@ namespace MetalForge.Core.Gates
                                                  : Check.Warn("Queue autoportant", $"{P.TailPercent:0} % < 40 % : basculement possible"));
                 r.Checks.Add(Check.Warn("Rail autoportant", "Rail et chariots à choisir chez le fabricant selon masse et portée."));
             }
-            r.Checks.Add(Check.Ok("Sécurité motorisation", "Si motorisé : conformité NF EN 12453 (efforts, détection) à valider.", "NF EN 12453"));
+            if (P.Motorized)
+            {
+                string reference = Standards.Norms.Portails;
+                double[] gaps = P.Type == GateType.Battant2 ? new[] { P.HingeGap, P.MeetingGap } : new[] { P.HingeGap };
+                foreach (var gp in gaps)
+                    r.Checks.Add(gp >= 25 ? Check.Ok("Écrasement des doigts", $"jeu {gp:0} mm ≥ 25", Standards.Norms.Ecartements)
+                                          : Check.Warn("Écrasement des doigts", $"jeu {gp:0} mm < 25 mm aux bords de fermeture : prévoir profil de sécurité / bord sensible", Standards.Norms.Ecartements));
+                if (P.Type == GateType.Coulissant)
+                    r.Checks.Add(Check.Warn("Cisaillement au pilier", "Barreaudage passant devant le pilier : prévoir une protection (grillage fin, tôle) dans la zone de passage ou une distance de sécurité.", reference));
+                r.Checks.Add(Check.Info("Motorisation", "Efforts de fermeture, détection d'obstacle et notice selon NF EN 12453 ; marquage CE du portail motorisé (NF EN 13241).", reference));
+            }
+            else
+                r.Checks.Add(Check.Info("Motorisation", "Portail manuel. En cas de motorisation ultérieure : NF EN 12453 (efforts, détection).", Standards.Norms.Portails));
             return r;
         }
 

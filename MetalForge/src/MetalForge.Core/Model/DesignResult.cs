@@ -4,7 +4,7 @@ using System.Text;
 
 namespace MetalForge.Core.Model
 {
-    public enum CheckLevel { Ok, Avertissement, NonConforme }
+    public enum CheckLevel { Ok, Avertissement, NonConforme, Info }
 
     /// <summary>Résultat d'une vérification réglementaire ou de bonne pratique.</summary>
     public sealed class Check
@@ -20,10 +20,13 @@ namespace MetalForge.Core.Model
             new Check { Level = CheckLevel.Avertissement, Rule = rule, Message = msg, Reference = reference };
         public static Check Fail(string rule, string msg, string reference = null) =>
             new Check { Level = CheckLevel.NonConforme, Rule = rule, Message = msg, Reference = reference };
+        public static Check Info(string rule, string msg, string reference = null) =>
+            new Check { Level = CheckLevel.Info, Rule = rule, Message = msg, Reference = reference };
 
         public override string ToString()
         {
-            var icon = Level == CheckLevel.Ok ? "[OK]" : Level == CheckLevel.Avertissement ? "[ATTENTION]" : "[NON CONFORME]";
+            var icon = Level == CheckLevel.Ok ? "[OK]" : Level == CheckLevel.Avertissement ? "[ATTENTION]"
+                     : Level == CheckLevel.Info ? "[INFO]" : "[NON CONFORME]";
             return $"{icon} {Rule} : {Message}" + (string.IsNullOrEmpty(Reference) ? "" : $" ({Reference})");
         }
     }
