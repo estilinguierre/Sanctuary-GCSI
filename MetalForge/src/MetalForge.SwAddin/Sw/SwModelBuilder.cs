@@ -52,7 +52,7 @@ namespace MetalForge.SwAddin.Sw
                 foreach (var grp in model.Members.GroupBy(m => m.ProfileId, StringComparer.OrdinalIgnoreCase))
                     BuildMembers(doc, grp.Key, grp.ToList());
 
-                foreach (var grp in model.Plates.GroupBy(p => (Math.Round(p.Depth, 3), Math.Round(p.ZCenter, 3))))
+                foreach (var grp in model.Plates.GroupBy(p => (p.Plane, Math.Round(p.Depth, 3), Math.Round(p.ZCenter, 3))))
                     BuildPlates(doc, grp.ToList());
             }
             finally
@@ -181,23 +181,37 @@ namespace MetalForge.SwAddin.Sw
 
         private void BuildPlates(ModelDoc2 doc, List<Plate> plates)
         {
-            var front = FirstRefPlane(doc);
-            if (front == null) { Warnings.Add("Plan de face introuvable : tôles non créées."); return; }
+            // Plans de référence dans l'ordre de l'arbre : 0 = face (XY), 1 = dessus (XZ), 2 = droite (YZ) — indépendant de la langue.
+            int index = plates[0].Plane == PlatePlane.XY ? 0 : plates[0].Plane == PlatePlane.XZ ? 1 : 2;
+            var plane = RefPlane(doc, index);
+            if (plane == null) { Warnings.Add("Plan de référence introuvable : tôles non créées."); return; }
             doc.ClearSelection2(true);
-            front.Select2(false, 0);
+            plane.Select2(false, 0);
 
             var sk = doc.SketchManager;
             sk.InsertSketch(true);
+            var sketch = (Sketch)sk.ActiveSketch;
+            var xf = sketch != null ? (MathTransform)sketch.ModelToSketchTransform : null;
+            var mu = (MathUtility)_sw.GetMathUtility();
+            double[] ToSketch(Vec3 world)
+            {
+                if (xf == null) return new[] { world.X * MM, world.Y * MM, 0 };
+                var pt = (MathPoint)mu.CreatePoint(new[] { world.X * MM, world.Y * MM, world.Z * MM });
+                pt = (MathPoint)pt.MultiplyTransform(xf);
+                var d = (double[])pt.ArrayData;
+                return new[] { d[0], d[1], 0 };
+            }
             foreach (var pl in plates)
                 for (int i = 0; i < pl.Outline.Count; i++)
                 {
-                    var a = pl.Outline[i]; var b = pl.Outline[(i + 1) % pl.Outline.Count];
-                    sk.CreateLine(a.X * MM, a.Y * MM, 0, b.X * MM, b.Y * MM, 0);
+                    var a = ToSketch(pl.ToWorld(pl.Outline[i], 0));
+                    var b = ToSketch(pl.ToWorld(pl.Outline[(i + 1) % pl.Outline.Count], 0));
+                    sk.CreateLine(a[0], a[1], 0, b[0], b[1], 0);
                 }
 
             double depth = plates[0].Depth * MM, zc = plates[0].ZCenter * MM;
             bool mid = Math.Abs(zc) < 1e-9;
-            double startOffset = zc - depth / 2;
+            double startOffset = zc - depth / 2;                      // le long de la normale du plan (+Z, +Y, +X)
             var feat = doc.FeatureManager.FeatureExtrusion2(
                 true, false, false,                                   // un seul sens, pas d'inversion
                 mid ? (int)swEndConditions_e.swEndCondMidPlane : (int)swEndConditions_e.swEndCondBlind,
@@ -211,15 +225,15 @@ namespace MetalForge.SwAddin.Sw
                 mid ? 0 : Math.Abs(startOffset), !mid && startOffset < 0);
 
             if (feat == null) { sk.InsertSketch(true); Warnings.Add($"Extrusion des tôles « {plates[0].Role} » échouée."); return; }
-            feat.Name = "MF " + plates[0].Role + (mid ? "" : (zc > 0 ? " D" : " G"));
+            try { feat.Name = "MF " + plates[0].Role + " " + plates[0].Mark; } catch { /* nom déjà utilisé */ }
         }
 
-        private static Feature FirstRefPlane(ModelDoc2 doc)
+        private static Feature RefPlane(ModelDoc2 doc, int index)
         {
-            var f = (Feature)doc.FirstFeature();
+            var f = (Feature)doc.FirstFeature(); int n = 0;
             while (f != null)
             {
-                if (f.GetTypeName2() == "RefPlane") return f; // 1er plan = Plan de face (indépendant de la langue)
+                if (f.GetTypeName2() == "RefPlane") { if (n == index) return f; n++; }
                 f = (Feature)f.GetNextFeature();
             }
             return null;

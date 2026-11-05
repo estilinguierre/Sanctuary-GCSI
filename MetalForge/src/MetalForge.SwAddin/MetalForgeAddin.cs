@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using MetalForge.Core.Atomic;
 using MetalForge.Core.Gates;
 using MetalForge.Core.Ladders;
 using MetalForge.Core.Model;
@@ -38,6 +39,7 @@ namespace MetalForge.SwAddin
 
         private static readonly (string Name, string Hint, string Callback, string Enable, IconFactory.Glyph Glyph)[] Commands =
         {
+            ("Configurateur", "Configurateur atomique : 21 ouvrages, tous escaliers, pliage et chaudronnerie", nameof(OnConfigurator), nameof(EnableAlways), IconFactory.Glyph.Atomic),
             ("Escalier",      "Escalier droit métallique (Blondel, échappée, limons)", nameof(OnStair),    nameof(EnableAlways), IconFactory.Glyph.Stair),
             ("Garde-corps",   "Garde-corps NF P01-012 droit ou rampant",               nameof(OnRailing),  nameof(EnableAlways), IconFactory.Glyph.Railing),
             ("Portail",       "Portail battant / coulissant / clôture",                nameof(OnGate),     nameof(EnableAlways), IconFactory.Glyph.Gate),
@@ -149,6 +151,29 @@ namespace MetalForge.SwAddin
         {
             var doc = (ModelDoc2)_sw.ActiveDoc;
             return doc != null && doc.GetType() == (int)swDocumentTypes_e.swDocPART ? 1 : 0;
+        }
+
+        private ConfiguratorEngine _engine;
+        private ConfiguratorEngine Engine => _engine ?? (_engine = new ConfiguratorEngine());
+
+        /// <summary>Configurateur atomique : page web dans SolidWorks (WebView2), sinon grille de propriétés.</summary>
+        public void OnConfigurator() => Safe(() =>
+        {
+            if (ConfiguratorForm.RuntimeAvailable && System.IO.File.Exists(System.IO.Path.Combine(ConfiguratorForm.WebFolder, "index.html")))
+                using (var f = new ConfiguratorForm(Engine, GenerateAtomic)) f.ShowDialog(Owner);
+            else
+            {
+                var d = new AtomicDesigner(Engine);
+                using (var f = new DesignerForm(d, _settings, m => GenerateAtomic(d.Last))) f.ShowDialog(Owner);
+            }
+        });
+
+        private string GenerateAtomic(AtomicResult r)
+        {
+            var msg = Generate(r.Model);
+            if (r.SurfaceCount == 0) return msg;
+            var extra = "Surfaces de chaudronnerie non générées (" + string.Join(", ", r.SurfaceLabels) + ") : créer en Tôlerie (pli lofté / bride de base) à partir du développé DXF.";
+            return string.IsNullOrEmpty(msg) ? extra : msg + "\n• " + extra;
         }
 
         public void OnStair() => Safe(() => RunDesigner(new StairDesigner()));

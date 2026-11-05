@@ -15,7 +15,9 @@ namespace MetalForge.Core.Profiles
         UPN,              // DIN 1026
         IPE,              // EN 10365
         HEA,              // EN 10365
-        FerT              // EN 10055
+        FerT,             // EN 10055
+        HEB,              // EN 10365
+        Cable             // câble inox 7x19
     }
 
     /// <summary>
@@ -51,6 +53,7 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.RondPlein: return $"Rond plein Ø{f(B)}";
                     case ProfileFamily.Corniere: return $"Cornière {f(B)}x{f(H)}x{f(T)}";
                     case ProfileFamily.FerT: return $"Fer T {f(B)}x{f(H)}x{f(T)}";
+                    case ProfileFamily.Cable: return $"Câble inox Ø{f(B)}";
                     default: return Id; // UPN 120, IPE 200, HEA 140...
                 }
             }
@@ -70,12 +73,14 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.TubeRond: return Math.PI * (B - T) * T;
                     case ProfileFamily.Plat: return B * T;
                     case ProfileFamily.CarrePlein: return B * B;
-                    case ProfileFamily.RondPlein: return Math.PI * B * B / 4.0;
+                    case ProfileFamily.RondPlein:
+                    case ProfileFamily.Cable: return Math.PI * B * B / 4.0;
                     case ProfileFamily.Corniere: return T * (B + H - T);
                     case ProfileFamily.FerT: return T * (B + H - T);
                     case ProfileFamily.UPN:
                     case ProfileFamily.IPE:
                     case ProfileFamily.HEA:
+                    case ProfileFamily.HEB:
                         return 2 * B * Tf + (H - 2 * Tf) * T;
                     default: return 0;
                 }
@@ -95,14 +100,16 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.TubeCarre:
                     case ProfileFamily.TubeRectangulaire: return 2 * (B + H);
                     case ProfileFamily.TubeRond:
-                    case ProfileFamily.RondPlein: return Math.PI * B;
+                    case ProfileFamily.RondPlein:
+                    case ProfileFamily.Cable: return Math.PI * B;
                     case ProfileFamily.Plat: return 2 * (B + T);
                     case ProfileFamily.CarrePlein: return 4 * B;
                     case ProfileFamily.Corniere:
                     case ProfileFamily.FerT: return 2 * (B + H);
                     case ProfileFamily.UPN: return 2 * H + 4 * B - 2 * T;
                     case ProfileFamily.IPE:
-                    case ProfileFamily.HEA: return 2 * H + 4 * B - 2 * T;
+                    case ProfileFamily.HEA:
+                    case ProfileFamily.HEB: return 2 * H + 4 * B - 2 * T;
                     default: return 0;
                 }
             }
@@ -123,6 +130,7 @@ namespace MetalForge.Core.Profiles
                 {
                     case ProfileFamily.TubeRond:
                     case ProfileFamily.RondPlein:
+                    case ProfileFamily.Cable:
                     case ProfileFamily.CarrePlein: return B;
                     case ProfileFamily.Plat: return B;
                     default: return H;

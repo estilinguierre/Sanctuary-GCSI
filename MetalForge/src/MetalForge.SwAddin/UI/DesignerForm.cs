@@ -42,7 +42,7 @@ namespace MetalForge.SwAddin.UI
 
             var split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 380, FixedPanel = FixedPanel.Panel1 };
             _grid.SelectedObject = designer.Parameters;
-            _grid.PropertyValueChanged += (s, e) => Recompute();
+            _grid.PropertyValueChanged += (s, e) => { Recompute(); if (designer is Core.Atomic.AtomicDesigner) { _grid.Refresh(); Text = "MetalForge — " + designer.Title; } };
             split.Panel1.Controls.Add(_grid);
 
             var tabs = new TabControl { Dock = DockStyle.Fill };
@@ -138,6 +138,8 @@ namespace MetalForge.SwAddin.UI
                     DxfDrawings.FrontView(_result.Model).Save(d.FileName);
                     if (_designer is StairDesigner sd)
                         DxfDrawings.Stringer(sd).Save(System.IO.Path.ChangeExtension(d.FileName, null) + "_limon.dxf");
+                    if (_designer is Core.Atomic.AtomicDesigner ad && ad.Last != null && ad.Last.Flats.Count > 0)
+                        ad.Last.FlatsDxf().Save(System.IO.Path.ChangeExtension(d.FileName, null) + "_developpes.dxf");
                 }
         }
 

@@ -58,21 +58,32 @@ namespace MetalForge.Core.Profiles
             // UPN (DIN 1026-1) : h, b, tw, tf, kg/m
             foreach (var (h, b, tw, tf, m) in new[] { (80, 45, 6.0, 8.0, 8.64), (100, 50, 6.0, 8.5, 10.6), (120, 55, 7.0, 9.0, 13.4),
                                                       (140, 60, 7.0, 10.0, 16.0), (160, 65, 7.5, 10.5, 18.8), (180, 70, 8.0, 11.0, 22.0),
-                                                      (200, 75, 8.5, 11.5, 25.3) })
+                                                      (200, 75, 8.5, 11.5, 25.3), (220, 80, 9.0, 12.5, 29.4), (240, 85, 9.5, 13.0, 33.2) })
                 Add(new Profile { Id = "UPN" + h, Family = ProfileFamily.UPN, H = h, B = b, T = tw, Tf = tf, TabulatedMassPerMeter = m });
 
             // IPE (EN 10365)
             foreach (var (h, b, tw, tf, m) in new[] { (80, 46, 3.8, 5.2, 6.0), (100, 55, 4.1, 5.7, 8.1), (120, 64, 4.4, 6.3, 10.4),
                                                       (140, 73, 4.7, 6.9, 12.9), (160, 82, 5.0, 7.4, 15.8), (180, 91, 5.3, 8.0, 18.8),
                                                       (200, 100, 5.6, 8.5, 22.4), (220, 110, 5.9, 9.2, 26.2), (240, 120, 6.2, 9.8, 30.7),
-                                                      (270, 135, 6.6, 10.2, 36.1), (300, 150, 7.1, 10.7, 42.2) })
+                                                      (270, 135, 6.6, 10.2, 36.1), (300, 150, 7.1, 10.7, 42.2),
+                                                      (330, 160, 7.5, 11.5, 49.1), (360, 170, 8.0, 12.7, 57.1) })
                 Add(new Profile { Id = "IPE" + h, Family = ProfileFamily.IPE, H = h, B = b, T = tw, Tf = tf, TabulatedMassPerMeter = m });
 
             // HEA (EN 10365) : désignation, h réel, b, tw, tf, kg/m
             foreach (var (n, h, b, tw, tf, m) in new[] { (100, 96, 100, 5.0, 8.0, 16.7), (120, 114, 120, 5.0, 8.0, 19.9),
                                                          (140, 133, 140, 5.5, 8.5, 24.7), (160, 152, 160, 6.0, 9.0, 30.4),
-                                                         (180, 171, 180, 6.0, 9.5, 35.5), (200, 190, 200, 6.5, 10.0, 42.3) })
+                                                         (180, 171, 180, 6.0, 9.5, 35.5), (200, 190, 200, 6.5, 10.0, 42.3),
+                                                         (220, 210, 220, 7.0, 11.0, 50.5), (240, 230, 240, 7.5, 12.0, 60.3) })
                 Add(new Profile { Id = "HEA" + n, Family = ProfileFamily.HEA, H = h, B = b, T = tw, Tf = tf, TabulatedMassPerMeter = m });
+
+            // HEB (EN 10365)
+            foreach (var (h, b, tw, tf, m) in new[] { (100, 100, 6.0, 10.0, 20.4), (120, 120, 6.5, 11.0, 26.7), (140, 140, 7.0, 12.0, 33.7),
+                                                      (160, 160, 8.0, 13.0, 42.6), (180, 180, 8.5, 14.0, 51.2), (200, 200, 9.0, 15.0, 61.3) })
+                Add(new Profile { Id = "HEB" + h, Family = ProfileFamily.HEB, H = h, B = b, T = tw, Tf = tf, TabulatedMassPerMeter = m });
+
+            // Câbles inox 7x19 (≈ 3,9·d² g/m)
+            foreach (var d in new[] { 3, 4, 5, 6, 8, 10 })
+                Add(new Profile { Id = "CAB" + d, Family = ProfileFamily.Cable, B = d, H = d, T = d, TabulatedMassPerMeter = 0.0039 * d * d });
         }
 
         public static IReadOnlyCollection<Profile> All => _items.Values;
@@ -96,7 +107,7 @@ namespace MetalForge.Core.Profiles
             throw new ArgumentException($"Profilé inconnu : '{id}'. Exemples valides : TC40x40x2, TR60x40x2, TRD42.4x2, PL40x8, RP12, L40x40x4, UPN120, IPE200.");
         }
 
-        private static readonly Regex Num = new Regex(@"^(?<p>TC|TR|TRD|PL|CP|RP|L|T)(?<a>\d+(\.\d+)?)(x(?<b>\d+(\.\d+)?))?(x(?<c>\d+(\.\d+)?))?$",
+        private static readonly Regex Num = new Regex(@"^(?<p>TC|TR|TRD|PL|CP|RP|CAB|L|T)(?<a>\d+(\.\d+)?)(x(?<b>\d+(\.\d+)?))?(x(?<c>\d+(\.\d+)?))?$",
                                                       RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         /// <summary>Crée un profilé hors catalogue à partir de son identifiant (sections paramétriques uniquement).</summary>
@@ -117,6 +128,7 @@ namespace MetalForge.Core.Profiles
                 case "PL" when b > 0: p = new Profile { Family = ProfileFamily.Plat, B = a, H = b, T = b }; break;
                 case "CP": p = new Profile { Family = ProfileFamily.CarrePlein, B = a, H = a, T = a }; break;
                 case "RP": p = new Profile { Family = ProfileFamily.RondPlein, B = a, H = a, T = a }; break;
+                case "CAB": p = new Profile { Family = ProfileFamily.Cable, B = a, H = a, T = a, TabulatedMassPerMeter = 0.0039 * a * a }; break;
                 case "L" when c > 0: p = new Profile { Family = ProfileFamily.Corniere, B = a, H = b, T = c }; break;
                 case "T" when c > 0: p = new Profile { Family = ProfileFamily.FerT, B = a, H = b, T = c }; break;
             }

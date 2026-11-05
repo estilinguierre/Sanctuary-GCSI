@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="fr">
+<title>Configurateur MetalForge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : atelier — colonne de réglages (atomes), vue 3D au centre, fiche de résultats dessous. Accent « minium » (primaire antirouille). */
+:root {
+  --paper: #f3f4f1; --panel: #ffffff; --ink: #1a242e; --mute: #5d6874; --line: #d8dcd9; --steel: #3d5a73; --steel-2: #6f8aa1;
+  --minium: #c4472a; --minium-soft: #f6e2db; --ok: #1f7a47; --warn: #a35f00; --ko: #b3261e; --info: #2f5b92; --viewer: #e9ecea;
+  --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif; --body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif; --mono: "IBM Plex Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #11161b; --panel: #182027; --ink: #e2e7eb; --mute: #98a4af; --line: #2a343d; --steel: #8fb1cc; --steel-2: #6c8aa3;
+  --minium: #e8693f; --minium-soft: #3a231b; --ok: #4cc283; --warn: #e3a646; --ko: #f07167; --info: #7fb0ee; --viewer: #0d1216; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #11161b; --panel: #182027; --ink: #e2e7eb; --mute: #98a4af; --line: #2a343d; --steel: #8fb1cc; --steel-2: #6c8aa3;
+  --minium: #e8693f; --minium-soft: #3a231b; --ok: #4cc283; --warn: #e3a646; --ko: #f07167; --info: #7fb0ee; --viewer: #0d1216; color-scheme: dark }
+html, body { height: 100%; }
+body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--body); margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+.app { display: grid; grid-template-rows: auto auto 1fr; height: 100%; }
+header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.brand { font: 700 22px/1 var(--display); letter-spacing: .02em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.brand b { color: var(--minium); }
+.brand small { font: 500 13px var(--body); text-transform: none; color: var(--mute); letter-spacing: 0; }
+.status { margin-left: auto; display: flex; gap: 8px; align-items: center; font: 500 13px var(--mono); }
+.pill { padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.ko { color: var(--ko); }
+.cats { display: flex; flex-direction: column; gap: 6px; padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); }
+.catrow, .famrow { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.cat { font: 600 15px var(--display); text-transform: uppercase; letter-spacing: .05em; background: none; border: 0; color: var(--mute); padding: 4px 8px; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
+.cat[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--minium); }
+.fam { font: 500 13px var(--body); border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 5px 11px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.fam[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--minium); outline-offset: 2px; }
+main { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); min-height: 0; }
+aside.params { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); padding: 10px 12px 40px; min-width: 0; }
+.ptitle { font: 700 20px var(--display); text-transform: uppercase; margin: 4px 2px 2px; letter-spacing: .02em; }
+.pdesc { color: var(--mute); font-size: 12.5px; margin: 0 2px 8px; }
+details.grp { border-top: 1px solid var(--line); }
+details.grp > summary { list-style: none; cursor: pointer; padding: 9px 2px; font: 600 14px var(--display); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: center; }
+details.grp > summary::after { content: "+"; font: 500 16px var(--mono); color: var(--mute); }
+details.grp[open] > summary::after { content: "–"; }
+details.grp > summary .atom { font: 500 10.5px var(--mono); color: var(--minium); letter-spacing: .04em; border: 1px solid var(--minium); border-radius: 3px; padding: 0 5px; margin-left: 8px; }
+.field { display: grid; grid-template-columns: 1fr 128px; gap: 8px; align-items: center; padding: 4px 2px; }
+.field label { font-size: 12.5px; color: var(--ink); }
+.field .ctl { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.field input[type=number], .field input[type=text], .field select { width: 100%; min-width: 0; font: 13px var(--mono); padding: 5px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); }
+.field .u { font: 11px var(--mono); color: var(--mute); min-width: 28px; }
+.field input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--minium); }
+.center { display: grid; grid-template-rows: minmax(300px, 58%) minmax(0, 1fr); min-height: 0; min-width: 0; }
+.viewer { position: relative; background: var(--viewer); min-height: 300px; border-bottom: 1px solid var(--line); }
+.viewer canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.vtools { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; flex-wrap: wrap; }
+.vtools button, .btn { font: 500 12px var(--body); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; cursor: pointer; }
+.btn.primary { background: var(--minium); border-color: var(--minium); color: #fff; font-weight: 600; }
+.vinfo { position: absolute; bottom: 10px; left: 10px; right: 10px; display: flex; gap: 16px; flex-wrap: wrap; font: 12px var(--mono); color: var(--mute); pointer-events: none; }
+.vinfo b { color: var(--ink); font-weight: 500; }
+.err { position: absolute; inset: auto 10px 40px 10px; background: var(--panel); border: 1px solid var(--ko); color: var(--ko); padding: 8px 12px; border-radius: 4px; font-size: 13px; }
+.results { display: grid; grid-template-rows: auto 1fr; min-height: 0; background: var(--panel); }
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); padding: 0 8px; }
+.tab { font: 600 14px var(--display); text-transform: uppercase; letter-spacing: .05em; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--mute); padding: 9px 10px; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--minium); }
+.tab .n { font: 500 11px var(--mono); color: var(--mute); margin-left: 4px; }
+.pane { overflow: auto; padding: 12px 16px 28px; min-width: 0; }
+.checks { display: grid; gap: 4px; }
+.chk { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 6px; padding: 6px 8px; border-left: 3px solid var(--line); background: var(--paper); border-radius: 0 4px 4px 0; }
+.chk.ok { border-left-color: var(--ok); } .chk.warn { border-left-color: var(--warn); } .chk.fail { border-left-color: var(--ko); } .chk.info { border-left-color: var(--info); }
+.chk .i { font: 600 14px var(--mono); } .chk.ok .i { color: var(--ok); } .chk.warn .i { color: var(--warn); } .chk.fail .i { color: var(--ko); } .chk.info .i { color: var(--info); }
+.chk .r { font-weight: 600; font-size: 13px; } .chk .m { font-size: 12.5px; } .chk .ref { font: 11px var(--mono); color: var(--mute); }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .05em; color: var(--mute); }
+td.n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.tablewrap { overflow-x: auto; }
+.kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 24px; }
+.kv div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding: 5px 0; font-size: 13px; }
+.kv span:last-child { font-family: var(--mono); text-align: right; }
+.bar { display: flex; height: 20px; margin: 3px 0; border: 1px solid var(--steel-2); border-radius: 2px; overflow: hidden; font: 10.5px var(--mono); }
+.bar span { background: var(--steel); color: var(--panel); border-right: 2px solid var(--panel); white-space: nowrap; overflow: hidden; padding: 2px 4px; }
+.bar i { flex: 1; background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--line) 4px, var(--line) 8px); font-style: normal; color: var(--mute); padding: 2px 4px; text-align: right; }
+h3 { font: 600 16px var(--display); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
+.tot { font: 600 15px var(--mono); }
+.atoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.atomcard { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+.atomcard h4 { margin: 0 0 4px; font: 600 14px var(--display); text-transform: uppercase; letter-spacing: .05em; color: var(--minium); }
+.atomcard li { font-size: 12.5px; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
+.atomcard ul { margin: 0; padding: 0; }
+.flats svg { width: 100%; height: auto; max-height: 460px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+.flats .cut { stroke: var(--minium); } .flats .bend { stroke: var(--steel); stroke-dasharray: 6 4; } .flats text { fill: var(--ink); font-family: var(--mono); }
+textarea { width: 100%; min-height: 140px; font: 12px var(--mono); background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 8px; box-sizing: border-box; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.costin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 18px; margin-bottom: 10px; }
+.note { color: var(--mute); font-size: 12px; }
+@media (max-width: 860px) {
+  .app { display: block; height: auto; }
+  main { display: flex; flex-direction: column; }
+  .center { display: block; order: -1; }
+  .viewer { height: 52vh; }
+  aside.params { border-right: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .results .pane { max-height: none; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .field { grid-template-columns: 1fr 140px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">Metal<b>Forge</b> <small>Configurateur atomique</small></div>
+    <div class="status" id="status"></div>
+  </header>
+  <nav class="cats" aria-label="Ouvrages">
+    <div class="catrow" id="cats" role="toolbar"></div>
+    <div class="famrow" id="fams" role="toolbar"></div>
+  </nav>
+  <main>
+    <aside class="params" id="params" aria-label="Paramètres"></aside>
+    <section class="center">
+      <div class="viewer" id="viewer">
+        <div class="vtools">
+          <button id="v-iso" type="button">3D</button><button id="v-front" type="button">Face</button><button id="v-top" type="button">Dessus</button><button id="v-side" type="button">Côté</button>
+          <button id="v-wire" type="button" aria-pressed="false">Filaire</button>
+        </div>
+        <div class="vinfo" id="vinfo"></div>
+        <div class="err" id="err" hidden></div>
+      </div>
+      <div class="results">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div class="pane" id="pane"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="engine.js"></script>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const E = window.MetalForgeEngine;
+const host = window.chrome && window.chrome.webview ? window.chrome.webview : null; // SolidWorks (WebView2)
+const SCHEMA = E.schema();
+const CATS = [...new Set(SCHEMA.map(f => f.cat))];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (v, d = 0) => Number(v).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem('mf.' + k) || 'null'); localStorage.setItem('mf.' + k, JSON.stringify(v)); } catch (e) { return null; } }
+
+const state = { fam: store('fam') || 'garde-corps', params: {}, tab: 'checks', result: null, cost: Object.assign({ acier: 1.9, rate: 55, margin: 25, finish: 'thermolaquage' }, store('cost') || {}) };
+SCHEMA.forEach(f => { state.params[f.id] = Object.assign(E.defaults(f.id), (store('p.' + f.id) || {})); });
+if (!E.families[state.fam]) state.fam = 'garde-corps';
+
+// ------------------------------------------------------------------ sélection d'ouvrage
+function renderCats() {
+  const cur = E.families[state.fam].cat;
+  $('cats').innerHTML = CATS.map(c => `<button class="cat" type="button" aria-pressed="${c === cur}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+  $('fams').innerHTML = SCHEMA.filter(f => f.cat === cur).map(f => `<button class="fam" type="button" aria-pressed="${f.id === state.fam}" data-fam="${f.id}">${esc(f.label)}</button>`).join('');
+}
+$('cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; state.fam = SCHEMA.find(f => f.cat === b.dataset.cat).id; select(); });
+$('fams').addEventListener('click', e => { const b = e.target.closest('[data-fam]'); if (!b) return; state.fam = b.dataset.fam; select(); });
+function select() { store('fam', state.fam); renderCats(); renderParams(); rebuild(true); }
+
+// ------------------------------------------------------------------ paramètres (générés depuis le schéma)
+const ATOM_TAG = { 'Poteaux': 'atome', 'Main courante': 'atome', 'Lisse basse': 'atome', 'Remplissage': 'atome', 'Fixation': 'atome', 'Marches': 'atome', 'Limons': 'assemblage', 'Garde-corps': 'assemblage',
+  'Cadre': 'assemblage', 'Piliers': 'atome', 'Quincaillerie & sécurité': 'atome', 'Ossature': 'assemblage', 'Plancher': 'atome', 'Crinoline': 'assemblage', 'Échelle': 'atome', 'Outillage': 'procédé', 'Tôle': 'atome', 'Forme': 'géométrie', 'Toiture': 'assemblage', 'Couverture': 'atome', 'Accès': 'ouvrage' };
+function visible(q, p) { if (!q.show) return true; const [k, ...vals] = q.show; return vals.some(v => v === p[k] || String(v) === String(p[k])); }
+function renderParams() {
+  const f = E.families[state.fam], p = state.params[state.fam], groups = [];
+  f.params.forEach(q => { let g = groups.find(x => x.name === q.g); if (!g) groups.push(g = { name: q.g, items: [] }); g.items.push(q); });
+  const lists = new Set(f.params.filter(q => q.list).map(q => q.list));
+  let h = `<div class="ptitle">${esc(f.label)}</div><p class="pdesc">${esc(f.cat)} · ${f.params.length} paramètres · chaque groupe est une brique réutilisable</p>`;
+  groups.forEach((g, gi) => {
+    const items = g.items.filter(q => visible(q, p)); if (!items.length) return;
+    h += `<details class="grp" ${gi < 4 ? 'open' : ''}><summary><span>${esc(g.name)}${ATOM_TAG[g.name] ? `<span class="atom">${ATOM_TAG[g.name]}</span>` : ''}</span></summary>`;
+    items.forEach(q => {
+      const id = 'p-' + q.k, v = p[q.k];
+      let ctl;
+      if (q.t === 'sel') ctl = `<select id="${id}" data-k="${q.k}">${q.o.map(o => `<option value="${esc(o[0])}" ${String(o[0]) === String(v) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
+      else if (q.t === 'bool') ctl = `<input id="${id}" data-k="${q.k}" type="checkbox" ${v ? 'checked' : ''}>`;
+      else if (q.t === 'prof') ctl = `<input id="${id}" data-k="${q.k}" type="text" list="dl-${q.list}" value="${esc(v)}" spellcheck="false" autocomplete="off">`;
+      else if (q.t === 'text') ctl = `<input id="${id}" data-k="${q.k}" type="text" value="${esc(v)}" spellcheck="false">`;
+      else ctl = `<input id="${id}" data-k="${q.k}" type="number" inputmode="decimal" step="${q.step || 1}" value="${esc(v)}">`;
+      h += `<div class="field"><label for="${id}">${esc(q.l)}</label><div class="ctl">${ctl}${q.u ? `<span class="u">${esc(q.u)}</span>` : ''}</div></div>`;
+    });
+    h += `</details>`;
+  });
+  h += [...lists].map(l => `<datalist id="dl-${l}">${(E.PROFILES[l] || []).map(x => `<option value="${x}">`).join('')}</datalist>`).join('');
+  h += `<div class="row"><button class="btn" type="button" id="reset">Valeurs par défaut</button></div>`;
+  const open = [...$('params').querySelectorAll('details.grp')].map(d => d.open);
+  $('params').innerHTML = h;
+  if (open.length) $('params').querySelectorAll('details.grp').forEach((d, i) => { if (open[i] !== undefined) d.open = open[i]; });
+  $('reset').onclick = () => { state.params[state.fam] = E.defaults(state.fam); store('p.' + state.fam, null); renderParams(); rebuild(true); };
+}
+let tmr = null;
+$('params').addEventListener('input', e => {
+  const el = e.target.closest('[data-k]'); if (!el) return;
+  const q = E.families[state.fam].params.find(x => x.k === el.dataset.k), p = state.params[state.fam];
+  p[q.k] = q.t === 'bool' ? el.checked : q.t === 'num' ? (el.value === '' ? q.d : Number(el.value)) : el.value;
+  store('p.' + state.fam, p);
+  if (q.t === 'sel' || q.t === 'bool') { const f = document.activeElement && document.activeElement.id; renderParams(); if (f && $(f)) $(f).focus(); }
+  clearTimeout(tmr); tmr = setTimeout(() => rebuild(false), 160);
+});
+
+// ------------------------------------------------------------------ calcul
+function rebuild(fit) {
+  try {
+    state.result = E.build(state.fam, state.params[state.fam], { cost: costOpt() });
+    $('err').hidden = true;
+    draw(state.result, fit); renderStatus(); renderTabs(); renderPane();
+  } catch (e) { $('err').hidden = false; $('err').textContent = 'Paramètres impossibles : ' + e.message; }
+}
+function costOpt() { const c = state.cost; return { acier: +c.acier, rate: +c.rate, margin: +c.margin, finish: c.finish }; }
+function renderStatus() {
+  const r = state.result, fails = r.checks.filter(c => c.level === 'fail').length, warns = r.checks.filter(c => c.level === 'warn').length;
+  $('status').innerHTML = `<span class="pill ${fails ? 'ko' : warns ? 'warn' : 'ok'}">${fails ? fails + ' non conforme' + (fails > 1 ? 's' : '') : warns ? warns + ' point' + (warns > 1 ? 's' : '') + ' d\'attention' : 'Conforme'}</span>`
+    + `<span>${fmt(r.mass, 1)} kg</span><span>${fmt(r.cost.ht, 0)} € HT</span>`;
+  $('vinfo').innerHTML = `<span><b>${esc(r.name)}</b></span><span>${r.members.length} barres</span><span>${r.plates.length} tôles</span>${r.flats.length ? `<span>${r.flats.length} développé(s)</span>` : ''}`;
+}
+
+// ------------------------------------------------------------------ onglets de résultats
+const TABS = [['checks', 'Conformité'], ['values', 'Résultats'], ['atoms', 'Composition'], ['bom', 'Nomenclature'], ['nest', 'Débit'], ['cost', 'Devis'], ['flats', 'Développés'], ['export', host ? 'SolidWorks & export' : 'Export']];
+function renderTabs() {
+  const r = state.result, cnt = { checks: r.checks.length, bom: r.bom.length, flats: r.flats.length, atoms: r.composition.length };
+  $('tabs').innerHTML = TABS.map(([k, l]) => `<button class="tab" role="tab" type="button" aria-selected="${state.tab === k}" data-tab="${k}">${l}${cnt[k] != null ? `<span class="n">${cnt[k]}</span>` : ''}</button>`).join('');
+}
+$('tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; state.tab = b.dataset.tab; renderTabs(); renderPane(); });
+const ICON = { ok: '✔', warn: '!', fail: '✖', info: 'i' };
+function renderPane() {
+  const r = state.result, P = $('pane');
+  switch (state.tab) {
+    case 'checks': {
+      const order = { fail: 0, warn: 1, ok: 2, info: 3 };
+      P.innerHTML = `<div class="checks">${r.checks.slice().sort((a, b) => order[a.level] - order[b.level]).map(c => `<div class="chk ${c.level}"><span class="i">${ICON[c.level]}</span><div><div class="r">${esc(c.rule)}</div><div class="m">${esc(c.msg)}</div>${c.ref ? `<div class="ref">${esc(c.ref)}</div>` : ''}</div></div>`).join('')}</div>`
+        + (r.notes.length ? `<p class="note">${r.notes.map(esc).join('<br>')}</p>` : '')
+        + `<p class="note">Aide à la conception : valeurs issues de sources secondaires (voir docs/NORMES.md) à confirmer sur les textes officiels ; pré-dimensionnement, pas une note de calcul signée.</p>`;
+      break;
+    }
+    case 'values': P.innerHTML = `<div class="kv">${r.values.map(([k, v]) => `<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('')}<div><span>Masse totale</span><span>${fmt(r.mass, 1)} kg</span></div><div><span>Surface à traiter</span><span>${fmt(r.paint, 2)} m²</span></div></div>`; break;
+    case 'atoms': P.innerHTML = `<p class="note">Atomes et assemblages qui composent l'ouvrage. Chaque brique se règle dans le groupe de paramètres du même nom.</p><div class="atoms">${r.composition.map(a => `<div class="atomcard"><h4>${esc(a.atom)}</h4><ul>${a.items.map(i => `<li><span>${esc(i.name)}</span><b>${i.qty}</b></li>`).join('')}</ul></div>`).join('')}</div>`; break;
+    case 'bom': P.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Repère</th><th>Désignation</th><th>Profil / matière</th><th class="n">Long.</th><th class="n">Larg.</th><th class="n">Qté</th><th class="n">Masse</th></tr></thead><tbody>${r.bom.map(b => `<tr><td>${esc(b.marks.length > 3 ? b.marks[0] + ' … ' + b.marks[b.marks.length - 1] : b.marks.join(', '))}</td><td>${esc(b.role)}</td><td>${esc(b.label)}</td><td class="n">${b.length ? fmt(b.length) : ''}</td><td class="n">${b.width ? fmt(b.width) : ''}</td><td class="n">${b.qty}</td><td class="n">${fmt(b.kg, 1)} kg</td></tr>`).join('')}<tr><td colspan="6"><b>Total</b></td><td class="n tot">${fmt(r.mass, 1)} kg</td></tr></tbody></table></div>`; break;
+    case 'nest': P.innerHTML = r.nesting.length ? r.nesting.map(n => `<h3>${esc(E.profile(n.profile).label)} — ${n.bars.length} barre(s) de ${fmt(n.stock)} mm · rendement ${fmt(n.yield * 100)} %</h3>${n.bars.map(b => `<div class="bar">${b.cuts.map(c => `<span style="width:${(c.L / n.stock * 100).toFixed(2)}%" title="${esc(c.mark)} ${fmt(c.L)}">${esc(c.mark)} ${fmt(c.L)}</span>`).join('')}<i>${fmt(b.rest)}</i></div>`).join('')}${n.oversize.length ? `<p class="note">Aboutage nécessaire : ${n.oversize.map(o => esc(o.mark) + ' ' + fmt(o.L)).join(', ')}</p>` : ''}`).join('') + `<p class="note">Optimisation 1D, trait de scie 3 mm, équerrage 10 mm.</p>` : `<p class="note">Pas de barres à débiter (tôlerie / chaudronnerie : voir Développés).</p>`; break;
+    case 'cost': {
+      const c = state.cost;
+      P.innerHTML = `<div class="costin">
+        <div class="field"><label for="c-acier">Acier (€/kg)</label><div class="ctl"><input id="c-acier" data-c="acier" type="number" step="0.1" value="${c.acier}"></div></div>
+        <div class="field"><label for="c-rate">Taux horaire (€/h)</label><div class="ctl"><input id="c-rate" data-c="rate" type="number" value="${c.rate}"></div></div>
+        <div class="field"><label for="c-margin">Marge (%)</label><div class="ctl"><input id="c-margin" data-c="margin" type="number" value="${c.margin}"></div></div>
+        <div class="field"><label for="c-finish">Finition</label><div class="ctl"><select id="c-finish" data-c="finish">${[['brut', 'Brut'], ['peinture', 'Peinture'], ['thermolaquage', 'Thermolaquage'], ['galva', 'Galvanisation'], ['galva+thermo', 'Galva + thermolaquage']].map(o => `<option value="${o[0]}" ${o[0] === c.finish ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></div></div></div>
+        <div class="tablewrap"><table><tbody>${r.cost.lines.map(l => `<tr><td>${esc(l[0])}</td><td class="n">${fmt(l[1], 2)} €</td></tr>`).join('')}
+        <tr><td>Déboursé sec</td><td class="n">${fmt(r.cost.sub, 2)} €</td></tr><tr><td><b>Total HT</b></td><td class="n tot">${fmt(r.cost.ht, 2)} €</td></tr><tr><td>Total TTC (20 %)</td><td class="n">${fmt(r.cost.ttc, 2)} €</td></tr></tbody></table></div>
+        <p class="note">Estimation indicative : temps forfaitaires par coupe et par soudure, matière achetée d'après le plan de débit.</p>`;
+      P.querySelectorAll('[data-c]').forEach(el => el.addEventListener('change', () => { state.cost[el.dataset.c] = el.value; store('cost', state.cost); rebuild(false); }));
+      break;
+    }
+    case 'flats': P.innerHTML = r.flats.length ? `<div class="flats">${r.flats.map(flatSvg).join('')}</div>` : `<p class="note">Aucun développé pour cet ouvrage. Développés disponibles : pliage, virole, tronc de cône, piquage, trémie, limon tôle et marches pliées d'escalier droit.</p>`; break;
+    case 'export': {
+      const json = JSON.stringify({ engine: 'MetalForge', family: state.fam, params: state.params[state.fam] }, null, 1);
+      P.innerHTML = (host ? `<div class="row"><button class="btn primary" type="button" id="sw-build">Générer dans SolidWorks</button><button class="btn" type="button" id="sw-dxf">Enregistrer le DXF</button><button class="btn" type="button" id="sw-csv">Enregistrer la nomenclature</button></div>` : '')
+        + `<h3>Configuration (à importer dans SolidWorks)</h3><textarea id="x-json" readonly>${esc(json)}</textarea><div class="row"><button class="btn" type="button" data-copy="x-json">Copier</button></div>
+        <h3>Importer une configuration</h3><textarea id="x-in" placeholder="Coller ici une configuration MetalForge (JSON)"></textarea><div class="row"><button class="btn" type="button" id="x-load">Charger</button><span class="note" id="x-msg"></span></div>
+        <h3>Nomenclature CSV</h3><textarea id="x-csv" readonly>${esc(E.toCsv(r))}</textarea><div class="row"><button class="btn" type="button" data-copy="x-csv">Copier</button></div>
+        ${r.flats.length ? `<h3>Développés DXF (R12)</h3><textarea id="x-dxf" readonly>${esc(E.toDxf(r))}</textarea><div class="row"><button class="btn" type="button" data-copy="x-dxf">Copier</button><span class="note">Coller dans un fichier .dxf</span></div>` : ''}`;
+      P.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => { const t = $(b.dataset.copy); navigator.clipboard.writeText(t.value).then(() => { b.textContent = 'Copié'; }, () => { t.focus(); t.select(); b.textContent = 'Sélectionné : Ctrl+C'; }); }));
+      $('x-load').onclick = () => { try { const o = JSON.parse($('x-in').value); if (!E.families[o.family]) throw new Error('famille inconnue'); state.fam = o.family; state.params[o.family] = Object.assign(E.defaults(o.family), o.params); select(); } catch (e) { $('x-msg').textContent = 'Configuration illisible : ' + e.message; } };
+      if (host) {
+        $('sw-build').onclick = () => host.postMessage(JSON.stringify({ action: 'build', result: state.result }));
+        $('sw-dxf').onclick = () => host.postMessage(JSON.stringify({ action: 'save', kind: 'dxf', name: state.result.name + '.dxf', content: E.toDxf(state.result) }));
+        $('sw-csv').onclick = () => host.postMessage(JSON.stringify({ action: 'save', kind: 'csv', name: state.result.name + '.csv', content: E.toCsv(state.result) }));
+      }
+      break;
+    }
+  }
+}
+function flatSvg(f) {
+  const pts = f.outline.concat(...(f.lines || []).map(l => [l.a, l.b])), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1), pad = Math.max(w, h) * 0.08;
+  const fs = Math.max(w, h) / 45, T = p => `${(p[0] - x0 + pad).toFixed(1)},${(y1 - p[1] + pad).toFixed(1)}`;
+  return `<h3>${esc(f.name)}</h3><svg viewBox="0 0 ${(w + 2 * pad).toFixed(0)} ${(h + 2 * pad).toFixed(0)}" role="img" aria-label="${esc(f.name)}">
+    <polygon class="cut" points="${f.outline.map(T).join(' ')}" fill="none" stroke-width="${(fs / 6).toFixed(2)}"/>
+    ${(f.lines || []).map(l => `<line class="bend" x1="${T(l.a).split(',')[0]}" y1="${T(l.a).split(',')[1]}" x2="${T(l.b).split(',')[0]}" y2="${T(l.b).split(',')[1]}" stroke-width="${(fs / 8).toFixed(2)}"/>${l.label ? `<text x="${T(l.a).split(',')[0]}" y="${(+T(l.a).split(',')[1] - fs * 0.4).toFixed(1)}" font-size="${fs.toFixed(1)}">${esc(l.label)}</text>` : ''}`).join('')}
+    <text x="${pad.toFixed(1)}" y="${(h + 1.8 * pad).toFixed(1)}" font-size="${fs.toFixed(1)}">${fmt(w, 1)} × ${fmt(h, 1)} mm</text></svg>`;
+}
+
+// ------------------------------------------------------------------ vue 3D
+const vEl = $('viewer'), renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); vEl.prepend(renderer.domElement);
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.01, 500), controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.12;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9199, 1.2));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(4, 8, 6); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-6, 3, -4); scene.add(fill);
+let group = new THREE.Group(), grid = null, wire = false, bbox = new THREE.Box3();
+scene.add(group);
+const ROLE_COL = { Poteau: 0x34536e, Pilier: 0x2b4256, Limon: 0x2f4a62, Marche: 0x6c7680, Palier: 0x6c7680, Cadre: 0x3a5a78, Fixation: 0x8a96a2, Quincaillerie: 0xc4472a, 'Main courante': 0xb35b2a, Lisse: 0x4f6f8c, Remplissage: 0x7d95ab, Couverture: 0x9db7c9 };
+function colorFor(role) {
+  const r = role || ''; if (/Main courante/.test(r)) return ROLE_COL['Main courante']; if (/Poteau|Fût/.test(r)) return ROLE_COL.Poteau; if (/Pilier/.test(r)) return ROLE_COL.Pilier;
+  if (/Limon|Crémaillère|Console|Poutre|Solive|Traverse$|Panne/.test(r)) return ROLE_COL.Limon; if (/Cadre|Montant|Écharpe|Arceau/.test(r)) return ROLE_COL.Cadre;
+  if (/Gond|serrure|Butée|Rail|Chariot/.test(r)) return ROLE_COL.Quincaillerie; if (/Platine|Patte|Pince/.test(r)) return ROLE_COL.Fixation; if (/Lisse/.test(r)) return ROLE_COL.Lisse;
+  return ROLE_COL.Remplissage;
+}
+const MAT = { acier: () => new THREE.MeshStandardMaterial({ color: 0x8b949c, metalness: 0.55, roughness: 0.5, side: THREE.DoubleSide }),
+  inox: () => new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.8, roughness: 0.25, side: THREE.DoubleSide }),
+  alu: () => new THREE.MeshStandardMaterial({ color: 0xbfc5c9, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide }),
+  verre: () => new THREE.MeshPhysicalMaterial({ color: 0x9fd3dd, transparent: true, opacity: 0.32, roughness: 0.05, metalness: 0, side: THREE.DoubleSide, depthWrite: false }),
+  bois: () => new THREE.MeshStandardMaterial({ color: 0xa07448, roughness: 0.8, side: THREE.DoubleSide }),
+  grillage: () => new THREE.MeshStandardMaterial({ color: 0x55606a, metalness: 0.4, roughness: 0.6, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }),
+  beton: () => new THREE.MeshStandardMaterial({ color: 0xb9b6ae, roughness: 0.95, side: THREE.DoubleSide }),
+  polycarbonate: () => new THREE.MeshPhysicalMaterial({ color: 0xe8f1f2, transparent: true, opacity: 0.45, roughness: 0.2, side: THREE.DoubleSide, depthWrite: false }) };
+const S = 0.001;
+function sectionShape(p) {
+  const s = new THREE.Shape(), w = p.B, h = p.H, t = p.T, tf = p.Tf || p.T;
+  const R = (x, y, ww, hh) => { s.moveTo(x, y); s.lineTo(x + ww, y); s.lineTo(x + ww, y + hh); s.lineTo(x, y + hh); s.lineTo(x, y); };
+  if (p.fam === 'IPE' || p.fam === 'HEA' || p.fam === 'HEB') { const pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, -h / 2 + tf], [t / 2, -h / 2 + tf], [t / 2, h / 2 - tf], [w / 2, h / 2 - tf], [w / 2, h / 2], [-w / 2, h / 2], [-w / 2, h / 2 - tf], [-t / 2, h / 2 - tf], [-t / 2, -h / 2 + tf], [-w / 2, -h / 2 + tf]]; s.setFromPoints(pts.map(q => new THREE.Vector2(q[0], q[1]))); return s; }
+  if (p.fam === 'UPN') { const pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, -h / 2 + tf], [-w / 2 + t, -h / 2 + tf], [-w / 2 + t, h / 2 - tf], [w / 2, h / 2 - tf], [w / 2, h / 2], [-w / 2, h / 2]]; s.setFromPoints(pts.map(q => new THREE.Vector2(q[0], q[1]))); return s; }
+  if (p.fam === 'L') { const pts = [[-w / 2, -h / 2], [w / 2, -h / 2], [w / 2, -h / 2 + t], [-w / 2 + t, -h / 2 + t], [-w / 2 + t, h / 2], [-w / 2, h / 2]]; s.setFromPoints(pts.map(q => new THREE.Vector2(q[0], q[1]))); return s; }
+  if (p.fam === 'T') { const pts = [[-w / 2, h / 2], [w / 2, h / 2], [w / 2, h / 2 - t], [t / 2, h / 2 - t], [t / 2, -h / 2], [-t / 2, -h / 2], [-t / 2, h / 2 - t], [-w / 2, h / 2 - t]]; s.setFromPoints(pts.map(q => new THREE.Vector2(q[0], q[1]))); return s; }
+  R(-p.wa / 2, -p.sh / 2, p.wa, p.sh); return s;
+}
+function memberMesh(m, mat) {
+  const p = E.profile(m.profile), a = new THREE.Vector3(...m.a).multiplyScalar(S), b = new THREE.Vector3(...m.b).multiplyScalar(S), L = a.distanceTo(b);
+  const d = b.clone().sub(a).normalize(), ref = Math.abs(d.y) > 0.99 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  const v = ref.clone().sub(d.clone().multiplyScalar(ref.dot(d))).normalize(), w = new THREE.Vector3().crossVectors(d, v);
+  let geo;
+  if (p.round) { geo = new THREE.CylinderGeometry(p.B / 2 * S, p.B / 2 * S, L, 14); geo.rotateZ(-Math.PI / 2); }
+  else if (['IPE', 'HEA', 'HEB', 'UPN', 'L', 'T'].includes(p.fam)) {
+    geo = new THREE.ExtrudeGeometry(sectionShape(p), { depth: L / S, bevelEnabled: false }); geo.scale(S, S, S);
+    geo.rotateY(Math.PI / 2); geo.rotateX(0); // section (w, v) dans le plan (z, y) puis extrusion selon +x
+    const tmp = geo.attributes.position; for (let i = 0; i < tmp.count; i++) { const z = tmp.getZ(i); tmp.setZ(i, -z); }
+  } else { geo = new THREE.BoxGeometry(L, p.sh * S, p.wa * S); geo.translate(L / 2, 0, 0); }
+  if (p.round) geo.translate(L / 2, 0, 0);
+  const mesh = new THREE.Mesh(geo, mat);
+  const basis = new THREE.Matrix4().makeBasis(d, v, w), rot = new THREE.Matrix4().makeRotationX((m.rot || 0) * Math.PI / 180);
+  mesh.applyMatrix4(rot); mesh.applyMatrix4(basis); mesh.position.copy(a);
+  return mesh;
+}
+function plateMesh(pl) {
+  const shape = new THREE.Shape(pl.outline.map(q => new THREE.Vector2(q[0] * S, q[1] * S)));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: pl.depth * S, bevelEnabled: false });
+  const mesh = new THREE.Mesh(geo, (MAT[pl.material] || MAT.acier)());
+  if (pl.plane === 'XY') mesh.position.z = (pl.offset - pl.depth / 2) * S;
+  else if (pl.plane === 'XZ') { mesh.rotation.x = Math.PI / 2; mesh.position.y = (pl.offset + pl.depth / 2) * S; }
+  else { mesh.rotation.y = -Math.PI / 2; mesh.position.x = (pl.offset + pl.depth / 2) * S; }
+  return mesh;
+}
+function surfaceMesh(sf) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x9aa3ab, metalness: 0.6, roughness: 0.4, side: THREE.DoubleSide });
+  if (sf.kind === 'mesh') {
+    const pos = []; sf.quads.forEach(q => { [[0, 1, 2], [0, 2, 3]].forEach(t => t.forEach(i => pos.push(q[i][0] * S, q[i][1] * S, q[i][2] * S))); });
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return new THREE.Mesh(g, mat);
+  }
+  if (sf.kind === 'cone') { const g = new THREE.CylinderGeometry(sf.r2 * S, sf.r1 * S, sf.h * S, 64, 1, true); const m = new THREE.Mesh(g, mat); m.position.set(sf.base[0] * S, (sf.base[1] + sf.h / 2) * S, sf.base[2] * S); return m; }
+  const a = new THREE.Vector3(...sf.a).multiplyScalar(S), b = new THREE.Vector3(...sf.b).multiplyScalar(S), L = a.distanceTo(b);
+  const g = new THREE.CylinderGeometry(sf.r1 * S, sf.r1 * S, L, 64, 1, true), m = new THREE.Mesh(g, mat);
+  m.position.copy(a.clone().add(b).multiplyScalar(0.5)); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); return m;
+}
+function draw(r, fit) {
+  scene.remove(group); group.traverse(o => { if (o.geometry) o.geometry.dispose(); }); group = new THREE.Group();
+  const mats = {};
+  r.members.forEach(m => { const c = colorFor(m.role); mats[c] = mats[c] || new THREE.MeshStandardMaterial({ color: c, metalness: 0.5, roughness: 0.45, wireframe: wire }); group.add(memberMesh(m, mats[c])); });
+  r.plates.forEach(pl => { const mm = plateMesh(pl); if (wire) mm.material.wireframe = true; group.add(mm); });
+  r.surfaces.forEach(sf => group.add(surfaceMesh(sf)));
+  scene.add(group);
+  bbox = new THREE.Box3().setFromObject(group);
+  if (grid) scene.remove(grid);
+  const size = bbox.getSize(new THREE.Vector3()), span = Math.max(size.x, size.z, 2);
+  grid = new THREE.GridHelper(Math.ceil(span * 1.6), Math.ceil(span * 1.6) * 2, 0x9aa3ab, 0xc9ced2); grid.material.opacity = 0.35; grid.material.transparent = true;
+  grid.position.set((bbox.min.x + bbox.max.x) / 2, Math.min(0, bbox.min.y), (bbox.min.z + bbox.max.z) / 2); scene.add(grid);
+  if (fit) view('iso');
+}
+function view(kind) {
+  const c = bbox.getCenter(new THREE.Vector3()), s = bbox.getSize(new THREE.Vector3()), R = Math.max(s.length(), 0.5) * 1.05;
+  const dirs = { iso: [1, 0.75, 1.25], front: [0, 0, 1], top: [0, 1, 0.0001], side: [1, 0, 0] }, d = new THREE.Vector3(...dirs[kind]).normalize();
+  camera.position.copy(c.clone().add(d.multiplyScalar(R * 1.15))); controls.target.copy(c); camera.near = R / 200; camera.far = R * 50; camera.updateProjectionMatrix(); controls.update();
+}
+['iso', 'front', 'top', 'side'].forEach(k => $('v-' + k).addEventListener('click', () => view(k)));
+$('v-wire').addEventListener('click', e => { wire = !wire; e.target.setAttribute('aria-pressed', wire); draw(state.result, false); });
+function resize() { const w = vEl.clientWidth, h = vEl.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(vEl);
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+
+// ------------------------------------------------------------------ SolidWorks : messages entrants
+if (host) host.addEventListener('message', ev => { try { const o = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data; if (o.action === 'load' && E.families[o.family]) { state.fam = o.family; state.params[o.family] = Object.assign(E.defaults(o.family), o.params || {}); select(); } } catch (e) { /* message ignoré */ } });
+
+renderCats(); renderParams(); resize(); rebuild(true);
+</script>
+</html>

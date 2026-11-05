@@ -42,6 +42,7 @@ namespace MetalForge.Core.Profiles
                     return new SectionProperties(i, i, i / (d / 2), i / (d / 2), wpl, wpl);
                 }
                 case ProfileFamily.RondPlein:
+                case ProfileFamily.Cable:
                 {
                     double i = Math.PI * Math.Pow(p.B, 4) / 64;
                     return new SectionProperties(i, i, i / (p.B / 2), i / (p.B / 2), Math.Pow(p.B, 3) / 6, Math.Pow(p.B, 3) / 6);
@@ -66,6 +67,7 @@ namespace MetalForge.Core.Profiles
                     return Composite((0, 0, p.B, p.Tf), (0, p.Tf, p.T, p.H - 2 * p.Tf), (0, p.H - p.Tf, p.B, p.Tf));
                 case ProfileFamily.IPE:
                 case ProfileFamily.HEA:
+                case ProfileFamily.HEB:
                     return Composite((0, 0, p.B, p.Tf), ((p.B - p.T) / 2, p.Tf, p.T, p.H - 2 * p.Tf), (0, p.H - p.Tf, p.B, p.Tf));
                 default:
                     return new SectionProperties(0, 0, 0, 0);

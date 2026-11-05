@@ -29,15 +29,50 @@ namespace MetalForge.Core.Model
         public double PaintArea => Profile.PaintPerimeter * Length * 1e-6; // m²
     }
 
-    /// <summary>Tôle extrudée : contour dans le plan XY (vue de face), extrudée selon Z.</summary>
+    /// <summary>Plan d'esquisse d'une tôle : XY = plan de face (extrusion Z), XZ = plan de dessus (extrusion Y), YZ = plan de droite (extrusion X).</summary>
+    public enum PlatePlane { XY, XZ, YZ }
+
+    /// <summary>
+    /// Tôle / verre / platelage extrudé. Contour (u, v) dans le plan : XY → (x, y), XZ → (x, z), YZ → (z, y).
+    /// Extrusion de <see cref="Depth"/> centrée sur <see cref="ZCenter"/> (cote le long de la normale du plan).
+    /// </summary>
     public sealed class Plate
     {
         public string Mark { get; set; }
         public string Role { get; set; }
-        public List<Vec3> Outline { get; set; } = new List<Vec3>(); // Z ignoré
-        public double Depth { get; set; }         // extrusion selon Z (mm)
-        public double ZCenter { get; set; }       // plan médian
+        public PlatePlane Plane { get; set; } = PlatePlane.XY;
+        public List<Vec3> Outline { get; set; } = new List<Vec3>(); // (u, v) ; Z ignoré
+        public double Depth { get; set; }         // extrusion (mm)
+        public double ZCenter { get; set; }       // plan médian, le long de la normale
         public double Thickness { get; set; }     // épaisseur matière (pour nomenclature)
+        public string Material { get; set; } = "acier";
+        /// <summary>Masse volumique (kg/m³). Grillage / caillebotis : voir <see cref="KgPerM2"/>.</summary>
+        public double Density { get; set; } = Profile.SteelDensity;
+        public double FillRatio { get; set; } = 1;  // tôle perforée / découpée
+        public double KgPerM2 { get; set; }         // > 0 : masse surfacique (grillage, caillebotis)
+
+        /// <summary>Point 3D d'un sommet du contour, posé sur le plan médian.</summary>
+        public Vec3 ToWorld(Vec3 uv, double normal = double.NaN)
+        {
+            double n = double.IsNaN(normal) ? ZCenter : normal;
+            switch (Plane)
+            {
+                case PlatePlane.XZ: return new Vec3(uv.X, n, uv.Y);
+                case PlatePlane.YZ: return new Vec3(n, uv.Y, uv.X);
+                default: return new Vec3(uv.X, uv.Y, n);
+            }
+        }
+
+        /// <summary>Contour projeté en vue de face (XY), pour les aperçus.</summary>
+        public List<Vec3> FrontProjection()
+        {
+            if (Plane == PlatePlane.XY) return Outline;
+            double u0 = Outline.Min(p => p.X), u1 = Outline.Max(p => p.X), v0 = Outline.Min(p => p.Y), v1 = Outline.Max(p => p.Y);
+            double a = ZCenter - Depth / 2, b = ZCenter + Depth / 2;
+            return Plane == PlatePlane.XZ
+                ? new List<Vec3> { new Vec3(u0, a, 0), new Vec3(u1, a, 0), new Vec3(u1, b, 0), new Vec3(u0, b, 0) }
+                : new List<Vec3> { new Vec3(a, v0, 0), new Vec3(b, v0, 0), new Vec3(b, v1, 0), new Vec3(a, v1, 0) };
+        }
 
         public double OutlineArea
         {
@@ -54,7 +89,7 @@ namespace MetalForge.Core.Model
         }
 
         public double Volume => OutlineArea * Depth;                 // mm³
-        public double Mass => Volume * 1e-9 * Profile.SteelDensity;   // kg
+        public double Mass => KgPerM2 > 0 ? OutlineArea * 1e-6 * KgPerM2 : Volume * 1e-9 * Density * FillRatio;   // kg
         /// <summary>Dimensions brutes de la tôle (L x l) pour la nomenclature.</summary>
         public (double L, double W) BlankSize
         {
@@ -119,6 +154,6 @@ namespace MetalForge.Core.Model
         public double TotalMass => Members.Sum(m => m.Mass) + Plates.Sum(p => p.Mass);
 
         public double TotalPaintArea =>
-            Members.Sum(m => m.PaintArea) + Plates.Sum(p => 2 * p.OutlineArea * 1e-6 + 2 * p.Depth * p.Thickness * 1e-6);
+            Members.Sum(m => m.PaintArea) + Plates.Where(p => p.Material == "acier").Sum(p => 2 * p.OutlineArea * 1e-6);
     }
 }

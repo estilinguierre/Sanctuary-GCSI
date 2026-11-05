@@ -1,18 +1,39 @@
 # 🔩 MetalForge — complément SolidWorks pour la métallerie-serrurerie
 
-Complément (add-in) **Windows / SolidWorks** qui apporte les fonctions métier d'un logiciel de métallerie
-(type MetalCAD, HiCAD Serrurerie, TopSolid'Steel…) directement dans SolidWorks :
-escaliers, garde-corps, portails, débit optimisé des barres, nomenclature et devis.
+Complément (add-in) **Windows / SolidWorks** et **configurateur web** qui apportent les fonctions métier d'un logiciel de métallerie
+(type MetalCAD, HiCAD Serrurerie, TopSolid'Steel…) : garde-corps, clôtures, portails, escaliers de tous types, structures,
+pliage et chaudronnerie, avec contrôles normatifs, débit optimisé, nomenclature, devis et développés DXF.
+
+## 🧩 Configurateur atomique (nouveau)
+
+Un moteur unique de **briques paramétrables** construit **21 ouvrages** :
+- **atomes :** profilé, tôle, verre, câble, platine, gond… ;
+- **assemblages :** remplissage, travée, cadre, ligne de foulée, limons, crinoline, pli ;
+- **ouvrages :** les 21 familles complètes.
+
+Le même moteur tourne dans le navigateur (aperçu 3D, téléphone compris) et dans SolidWorks, où il génère la pièce mécano-soudée.
+
+- ▶️ Ouvrir `web/configurateur/index.html` dans un navigateur, ou la commande **Configurateur** dans SolidWorks.
+- 📖 Détail des briques, de l'éventail et des limites : **[docs/CONFIGURATEUR.md](docs/CONFIGURATEUR.md)**.
+
+| Escalier quart tournant balancé | Mezzanine avec escalier intégré |
+|---|---|
+| ![Quart tournant](docs/images/configurateur-escalier-quart.png) | ![Mezzanine](docs/images/configurateur-mezzanine.png) |
+| **Escalier hélicoïdal** | **Pliage : développé DIN 6935** |
+| ![Hélicoïdal](docs/images/configurateur-helicoidal.png) | ![Pliage](docs/images/configurateur-pliage.png) |
+
+| Famille | Ouvrages |
+|---|---|
+| Garde-corps & clôtures | garde-corps (droit, L, U, rampant ; 13 remplissages ; 5 poses), clôture (pente, redans) |
+| Portails & portillons | battant 1 / 2 vantaux, portillon, coulissant, autoportant ; 5 formes de chapeau |
+| Escaliers | droit, quart tournant, deux quarts, demi-tournant (palier ou balancé), hélicoïdal, meunier, pas japonais |
+| Structures & divers | mezzanine / plateforme, passerelle, auvent / marquise, pergola, portique / abri, échelle à crinoline |
+| Pliage & chaudronnerie | profil plié (9 formes dont personnalisé), virole, tronc de cône, piquage tube sur tube, trémie pyramidale |
 
 > ℹ️ Les fonctionnalités exactes de MetalCAD ne sont pas documentées publiquement. Le périmètre retenu
-> couvre les fonctions **cœur de métier** communes à ces logiciels (voir tableau ci-dessous) ; il est conçu pour
-> être étendu module par module.
+> couvre les fonctions **cœur de métier** communes à ces logiciels ; il est conçu pour être étendu brique par brique.
 
-![Escalier droit généré](docs/images/escalier.svg)
-
----
-
-## ✨ Fonctionnalités
+## ✨ Assistants détaillés (C#)
 
 | Module | Ce qu'il fait | Sorties |
 |---|---|---|
@@ -64,15 +85,20 @@ flowchart LR
 ```
 
 - **`MetalForge.Core`** — tout le calcul métier, sans dépendance à SolidWorks : testable, réutilisable
-  (application autonome, service web…). **71 tests unitaires.**
+  (application autonome, service web…), qui exécute aussi le moteur atomique `engine.js` via Jint. **98 tests unitaires C# + 22 tests du moteur JavaScript.**
 - **`MetalForge.SwAddin`** — le complément COM (.NET Framework 4.8, x64) : commandes, fenêtres WinForms,
   génération de la géométrie via l'API SolidWorks.
 
 Repère utilisé : **X** = longueur / sens de montée, **Y** = vertical, **Z** = profondeur. Cotes en **mm**.
 
 ```
+ web/configurateur/
+ │   ├─ engine.js        moteur atomique (partagé web / SolidWorks)
+ │   ├─ engine.test.js   tests Node
+ │   └─ index.html       configurateur 3D (three.js)
  src/
  ├─ MetalForge.Core/
+ │   ├─ Atomic/        exécution du moteur (Jint), import du modèle, grille de propriétés
  │   ├─ Profiles/      catalogue, masses EN, reconnaissance des noms SolidWorks
  │   ├─ Stairs/        escalier droit (Blondel, échappée, limons)
  │   ├─ Railings/      garde-corps (NF P01-012)
@@ -87,7 +113,7 @@ Repère utilisé : **X** = longueur / sens de montée, **Y** = vertical, **Z** =
  └─ MetalForge.SwAddin/
      ├─ MetalForgeAddin.cs   point d'entrée ISwAddin, onglet, volet des tâches
      ├─ Sw/                  génération 3D, lecture de la liste des pièces soudées
-     ├─ UI/                  fenêtres (paramètres, aperçu, débit, devis)
+     ├─ UI/                  configurateur (WebView2), fenêtres (paramètres, aperçu, débit, devis)
      ├─ Settings/            réglages (%APPDATA%\MetalForge\settings.xml)
      └─ Install/             register.bat / unregister.bat
  tests/MetalForge.Core.Tests/
@@ -162,7 +188,8 @@ La fenêtre **Profilés** indique pour chaque profilé s'il est trouvé (✓) ou
 ## 🧪 Tests
 
 ```bash
-dotnet test tests/MetalForge.Core.Tests
+node web/configurateur/engine.test.js     # moteur atomique (21 familles, normes, développés)
+dotnet test tests/MetalForge.Core.Tests   # moteur C# + exécution du moteur JS par Jint
 ```
 
 Le moteur (`MetalForge.Core`) est testé sur Linux/Windows/macOS (intégration continue GitHub Actions).

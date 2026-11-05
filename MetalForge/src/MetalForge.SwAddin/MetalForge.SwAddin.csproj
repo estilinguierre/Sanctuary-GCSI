@@ -49,6 +49,13 @@
 
   <ItemGroup>
     <None Include="Install\*.bat" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Configurateur web (même moteur que MetalForge.Core) affiché dans SolidWorks par WebView2 -->
+    <None Include="..\..\web\configurateur\index.html" Link="web\configurateur\index.html" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\web\configurateur\engine.js" Link="web\configurateur\engine.js" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2210.55" />
   </ItemGroup>
 
   <!-- Permet la compilation hors Windows / sans Visual Studio (assemblies de référence .NET Framework). -->

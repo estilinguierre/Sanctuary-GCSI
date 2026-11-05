@@ -42,7 +42,7 @@ namespace MetalForge.SwAddin.UI
             }
 
             // Emprise
-            var pts = _model.Members.SelectMany(m => new[] { m.Start, m.End }).Concat(_model.Plates.SelectMany(p => p.Outline)).ToList();
+            var pts = _model.Members.SelectMany(m => new[] { m.Start, m.End }).Concat(_model.Plates.SelectMany(p => p.FrontProjection())).ToList();
             double minX = pts.Min(p => p.X), maxX = pts.Max(p => p.X), minY = pts.Min(p => p.Y), maxY = pts.Max(p => p.Y);
             double w = Math.Max(1, maxX - minX), h = Math.Max(1, maxY - minY);
             const int margin = 50;
@@ -56,7 +56,7 @@ namespace MetalForge.SwAddin.UI
             using (var pen = new Pen(Color.DimGray, 1))
                 foreach (var pl in _model.Plates.OrderBy(p => p.Role == "Marche"))
                 {
-                    var poly = pl.Outline.Select(P).ToArray();
+                    var poly = pl.FrontProjection().Select(P).ToArray();
                     g.FillPolygon(pl.Role == "Marche" ? tread : fill, poly); g.DrawPolygon(pen, poly);
                 }
 

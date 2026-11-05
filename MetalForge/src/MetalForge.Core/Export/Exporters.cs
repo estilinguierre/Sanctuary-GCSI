@@ -149,7 +149,7 @@ namespace MetalForge.Core.Export
                 var n = new Vec3(-u.Y, u.X, 0) * (p.VisibleWidth / 2);
                 dxf.Polygon(new[] { Flat(m.Start) + n, Flat(m.End) + n, Flat(m.End) - n, Flat(m.Start) - n }, m.Role.ToUpperInvariant().Replace(' ', '_'));
             }
-            foreach (var pl in model.Plates) dxf.Polygon(pl.Outline, "TOLE");
+            foreach (var pl in model.Plates) dxf.Polygon(pl.FrontProjection(), "TOLE");
             return dxf;
         }
 
@@ -164,7 +164,7 @@ namespace MetalForge.Core.Export
         public static string FrontView(StructureModel model, int width = 900, int height = 600)
         {
             var inv = CultureInfo.InvariantCulture;
-            var pts = model.Members.SelectMany(m => new[] { m.Start, m.End }).Concat(model.Plates.SelectMany(p => p.Outline)).ToList();
+            var pts = model.Members.SelectMany(m => new[] { m.Start, m.End }).Concat(model.Plates.SelectMany(p => p.FrontProjection())).ToList();
             double minX = pts.Min(p => p.X), maxX = pts.Max(p => p.X), minY = pts.Min(p => p.Y), maxY = pts.Max(p => p.Y);
             double w = System.Math.Max(1, maxX - minX), h = System.Math.Max(1, maxY - minY);
             const int margin = 60;
@@ -176,7 +176,7 @@ namespace MetalForge.Core.Export
             sb.AppendLine($"<rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/>");
             sb.AppendLine($"<text x=\"{margin}\" y=\"28\" font-size=\"16\" font-weight=\"bold\" fill=\"#1d2b44\">{Xml(model.Name)}</text>");
             foreach (var pl in model.Plates)
-                sb.AppendLine($"<polygon points=\"{string.Join(" ", pl.Outline.Select(P))}\" fill=\"{(pl.Role == "Marche" ? "#3b4656" : "#9aa4b1")}\" fill-opacity=\"{(pl.Role == "Marche" ? "0.9" : "0.55")}\" stroke=\"#4a5361\" stroke-width=\"0.8\"/>");
+                sb.AppendLine($"<polygon points=\"{string.Join(" ", pl.FrontProjection().Select(P))}\" fill=\"{(pl.Role == "Marche" ? "#3b4656" : "#9aa4b1")}\" fill-opacity=\"{(pl.Role == "Marche" ? "0.9" : "0.55")}\" stroke=\"#4a5361\" stroke-width=\"0.8\"/>");
             var roles = model.Members.Select(m => m.Role).Distinct().ToList();
             foreach (var m in model.Members.OrderBy(m => m.Start.Z))
             {

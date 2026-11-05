@@ -1,4 +1,4 @@
-name: MetalForge — tests du moteur
+name: MetalForge — tests des moteurs (JS + C#)
 
 on:
   push:
@@ -17,5 +17,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      # Le complément SolidWorks (Windows + licence SW) n'est pas compilé ici : uniquement le moteur et ses tests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # Moteur de configuration atomique (JavaScript partagé web / SolidWorks)
+      - run: node web/configurateur/engine.test.js
+      # Le complément SolidWorks (Windows + licence SW) n'est pas compilé ici : uniquement le moteur C# et ses tests.
       - run: dotnet test tests/MetalForge.Core.Tests --nologo

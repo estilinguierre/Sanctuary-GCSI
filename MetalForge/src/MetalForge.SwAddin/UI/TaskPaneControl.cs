@@ -16,7 +16,10 @@ namespace MetalForge.SwAddin.UI
             layout.Controls.Add(new Label { Text = "MetalForge", Font = new Font("Segoe UI", 14f, FontStyle.Bold), AutoSize = true, ForeColor = Color.FromArgb(45, 75, 120) });
             layout.Controls.Add(new Label { Text = "Métallerie · Serrurerie", AutoSize = true, ForeColor = Color.Gray, Margin = new Padding(3, 0, 3, 12) });
 
-            Section(layout, "Ouvrages paramétriques");
+            Section(layout, "Configurateur atomique");
+            Add(layout, "Configurateur (21 ouvrages)", "Garde-corps, escaliers tous types, portails, structures, pliage", addin.OnConfigurator);
+
+            Section(layout, "Assistants détaillés");
             Add(layout, "Escalier droit", "Blondel, échappée, limons, marches", addin.OnStair);
             Add(layout, "Garde-corps", "NF P01-012:2024, privé / ERP / industriel", addin.OnRailing);
             Add(layout, "Portail / clôture", "Battant, coulissant, panneaux", addin.OnGate);

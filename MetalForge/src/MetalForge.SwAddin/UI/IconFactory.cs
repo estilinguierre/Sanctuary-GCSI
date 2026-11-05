@@ -13,7 +13,7 @@ namespace MetalForge.SwAddin.UI
     /// </summary>
     public static class IconFactory
     {
-        public enum Glyph { Stair, Railing, Gate, Ladder, CutList, Profiles, Settings, Logo }
+        public enum Glyph { Atomic, Stair, Railing, Gate, Ladder, CutList, Profiles, Settings, Logo }
 
         private static readonly int[] Sizes = { 20, 32, 40, 64, 96, 128 };
 
@@ -97,6 +97,11 @@ namespace MetalForge.SwAddin.UI
                         for (int x = 4; x <= 7; x += 3) g.DrawLine(thin, P(x, 6), P(x, 16));
                         for (int x = 13; x <= 16; x += 3) g.DrawLine(thin, P(x, 6), P(x, 16));
                         g.DrawLine(acc, P(1, 18.5f), P(19, 18.5f));
+                        break;
+                    case Glyph.Atomic: // briques élémentaires assemblées
+                        g.DrawLine(thin, P(5, 5), P(15, 9)); g.DrawLine(thin, P(5, 5), P(7, 15)); g.DrawLine(thin, P(15, 9), P(7, 15));
+                        using (var sb = new SolidBrush(steel)) { g.FillRectangle(sb, r.X + 2 * u, r.Y + 2 * u, 6 * u, 6 * u); g.FillRectangle(sb, r.X + 4 * u, r.Y + 12 * u, 6 * u, 6 * u); }
+                        using (var ab = new SolidBrush(accent)) g.FillEllipse(ab, r.X + 12 * u, r.Y + 6 * u, 6 * u, 6 * u);
                         break;
                     case Glyph.Ladder:
                         g.DrawLine(pen, P(5, 1), P(5, 19)); g.DrawLine(pen, P(11, 1), P(11, 19));
