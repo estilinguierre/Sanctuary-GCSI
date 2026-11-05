@@ -59,6 +59,12 @@ namespace MetalForge.Core.Atomic
             lock (_lock) { _js.SetValue("__r", resultJson); return _js.Evaluate("MetalForgeEngine.csvJson(__r)").AsString(); }
         }
 
+        /// <summary>Masse linéique (kg/m) d'un profilé selon le moteur JavaScript.</summary>
+        public double ProfileKgPerMeter(string id)
+        {
+            lock (_lock) { _js.SetValue("__id", id); return _js.Evaluate("MetalForgeEngine.profile(__id).kgm").AsNumber(); }
+        }
+
         /// <summary>Analyse un JSON quelconque en objets .NET (dictionnaires, tableaux, double, bool, string).</summary>
         public object ParseJson(string json)
         {
@@ -101,6 +107,13 @@ namespace MetalForge.Core.Atomic
                 if (p.TryGetValue("o", out var o))
                     foreach (object[] opt in (object[])o) q.Options.Add(new KeyValuePair<string, string>(Convert.ToString(opt[0], System.Globalization.CultureInfo.InvariantCulture), (string)opt[1]));
                 if (p.TryGetValue("show", out var sh)) q.ShowIf = ((object[])sh).ToArray();
+                if (p.TryGetValue("auto", out var au) && au != null) { q.AutoRule = Convert.ToString(au, System.Globalization.CultureInfo.InvariantCulture); q.Options.Add(new KeyValuePair<string, string>("__auto", "Auto — le plus léger conforme")); }
+                if (p.TryGetValue("groups", out var gr) && gr is object[] groups)
+                    foreach (IDictionary<string, object> g in groups)
+                    {
+                        var gname = (string)g["g"]; q.Groups.Add(gname);
+                        foreach (object[] opt in (object[])g["o"]) q.Options.Add(new KeyValuePair<string, string>((string)opt[0], gname + " › " + (string)opt[1]));
+                    }
                 f.Params.Add(q);
             }
             return f;
@@ -112,6 +125,8 @@ namespace MetalForge.Core.Atomic
         public string Key, Label, Type, Group, Unit, ProfileList;
         public object Default;
         public object[] ShowIf;
+        public string AutoRule;
+        public List<string> Groups { get; } = new List<string>();
         public List<KeyValuePair<string, string>> Options { get; } = new List<KeyValuePair<string, string>>();
 
         public bool IsVisible(IDictionary<string, object> values)

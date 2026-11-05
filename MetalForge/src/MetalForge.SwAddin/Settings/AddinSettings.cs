@@ -32,6 +32,9 @@ namespace MetalForge.SwAddin.Settings
         [Category("Profils SolidWorks"), DisplayName("Gabarit de pièce"), Description("Vide = gabarit par défaut SolidWorks.")]
         public string PartTemplate { get; set; } = "";
 
+        [Category("Configurateur"), DisplayName("Générer la maçonnerie"), Description("Crée une pièce séparée « maçonnerie » (dalles, murs, piliers) pour l'implantation et le rendu.")]
+        public bool BuildMasonry { get; set; } = true;
+
         [Category("Liste des pièces soudées"), DisplayName("Propriétés longueur"), Description("Noms séparés par « ; ».")]
         public string LengthPropertyNames { get; set; } = "LENGTH;LONGUEUR;Length;Longueur";
 

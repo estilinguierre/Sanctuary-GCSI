@@ -69,6 +69,11 @@ namespace MetalForge.Core.Profiles
                 case ProfileFamily.HEA:
                 case ProfileFamily.HEB:
                     return Composite((0, 0, p.B, p.Tf), ((p.B - p.T) / 2, p.Tf, p.T, p.H - 2 * p.Tf), (0, p.H - p.Tf, p.B, p.Tf));
+                case ProfileFamily.Special:
+                {   // approximation : rectangle plein de même aire
+                    double h = Math.Max(p.H, 1), w = p.Area / h, iy = w * h * h * h / 12, iz = h * w * w * w / 12;
+                    return new SectionProperties(iy, iz, iy / (h / 2), iz / (w / 2));
+                }
                 default:
                     return new SectionProperties(0, 0, 0, 0);
             }

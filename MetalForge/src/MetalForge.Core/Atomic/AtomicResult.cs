@@ -14,6 +14,8 @@ namespace MetalForge.Core.Atomic
         public string Name { get; set; }
         public List<Vec3> Outline { get; } = new List<Vec3>();
         public List<(Vec3 A, Vec3 B, string Layer, string Label)> Lines { get; } = new List<(Vec3, Vec3, string, string)>();
+        /// <summary>Cotes de traçage (repère, nez, dessus, profondeur…).</summary>
+        public List<string[]> Table { get; } = new List<string[]>();
     }
 
     /// <summary>Résultat du moteur atomique, converti en modèle neutre MetalForge (SolidWorks, débit, devis, note de calcul).</summary>
@@ -24,6 +26,9 @@ namespace MetalForge.Core.Atomic
         public DesignResult Design { get; private set; }
         public StructureModel Model => Design.Model;
         public List<FlatPattern> Flats { get; } = new List<FlatPattern>();
+        /// <summary>Contexte maçonné (dalles, murs, piliers…) : prismes verticaux, à générer dans une pièce séparée.</summary>
+        public StructureModel Masonry { get; } = new StructureModel { Name = "Maçonnerie" };
+        public List<(string Choice, string Profile)> AutoChoices { get; } = new List<(string, string)>();
         public int SurfaceCount { get; private set; }
         public List<string> SurfaceLabels { get; } = new List<string>();
         public double EngineMass { get; private set; }
@@ -77,6 +82,8 @@ namespace MetalForge.Core.Atomic
             {
                 var fp = new FlatPattern { Name = Str(f, "name") };
                 foreach (object[] q in (object[])f["outline"]) fp.Outline.Add(new Vec3(D(q[0]), D(q[1]), 0));
+                    if (f.TryGetValue("table", out var tb) && tb is object[] rows)
+                    foreach (object[] row in rows) fp.Table.Add(row.Select(c => Convert.ToString(c, CultureInfo.InvariantCulture)).ToArray());
                 if (f.TryGetValue("lines", out var ls) && ls is object[] la)
                     foreach (IDictionary<string, object> l in la)
                     {
@@ -86,6 +93,15 @@ namespace MetalForge.Core.Atomic
                 r.Flats.Add(fp);
             }
             foreach (IDictionary<string, object> s in Arr(root, "surfaces")) { r.SurfaceCount++; r.SurfaceLabels.Add(Str(s, "label") ?? Str(s, "kind")); }
+            r.Masonry.Name = m.Name + " — maçonnerie";
+            foreach (IDictionary<string, object> x in Arr(root, "masonry"))
+            {
+                var poly = ((object[])x["poly"]).Select(o => { var a = (object[])o; return new Vec3(D(a[0]), D(a[1]), 0); });
+                double y0 = Num(x, "y0"), h = Num(x, "h");
+                var pl = r.Masonry.AddPlate("MA", Str(x, "role"), poly, h, y0 + h / 2, h);
+                pl.Plane = PlatePlane.XZ; pl.Material = Str(x, "material") ?? "beton"; pl.Density = 2300; pl.Mark = Str(x, "mark");
+            }
+            foreach (IDictionary<string, object> a in Arr(root, "auto")) r.AutoChoices.Add((Str(a, "label"), Str(a, "id")));
             foreach (var n in Arr(root, "notes")) r.Notes.Add(Convert.ToString(n, CultureInfo.InvariantCulture));
             r.EngineMass = root.ContainsKey("mass") ? Num(root, "mass") : m.TotalMass;
             return r;

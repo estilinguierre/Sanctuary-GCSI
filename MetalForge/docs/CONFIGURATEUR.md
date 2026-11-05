@@ -141,6 +141,76 @@ Tous les développés s'exportent en **DXF R12** (calques `DECOUPE`, `PLIAGE`, `
 
 ---
 
+## 🤖 Mode automatique
+
+- **Dimensionnement automatique :**
+  - les profils structurels sont réglés par défaut sur **Auto — le plus léger conforme** : poteaux de garde-corps, limons, poutres, solives, poteaux de mezzanine, poutres de passerelle, consoles et tirants d'auvent, traverses de portique, échelons ;
+  - le moteur essaie la série du plus léger au plus lourd (recherche dichotomique) et garde le premier profil qui satisfait les vérifications de résistance qui le concernent ;
+  - le profil retenu s'affiche sous la liste (« → Tube carré 50x50x2 ») et dans *Résultats*.
+- **Règles de construction** ajoutées au calcul : hauteur mini du limon (débord + marche + 100 mm) et épaisseur ≥ 8 mm.
+- **Profil imposé :** choisir un profil dans la liste désactive l'auto pour ce paramètre ; les vérifications signalent alors s'il ne passe pas.
+
+## 📋 Listes déroulantes complètes
+
+Chaque profilé est choisi dans une **liste groupée par famille**, avec sa masse linéique. Une entrée « Autre profil (saisie libre) » accepte toute cote.
+
+| Groupe | Exemples |
+|---|---|
+| Mains courantes moulurées | demi-ronde 40x8 à 60x12, bombée, moulurée 40x30 à 60x45, creuse à gorge |
+| Mains courantes bois | 45x45, 50x40, 60x40, 70x45, 80x50 |
+| Tubes ronds acier / inox | Ø12 à Ø168,3 · inox Ø25 à Ø50,8 |
+| Tubes ovales et oblongs | ovale 50x25 à 80x40, oblong 40x20 à 80x30 |
+| Tubes carrés / rectangulaires | 15x15 à 200x200, 30x15 à 200x100 |
+| Plats | 20x3 à 400x20 |
+| Ronds, carrés pleins, **carrés torsadés** | Ø6 à Ø50, 8 à 40, torsadés 12 à 20 |
+| Profils U (lisse sur verre), câbles inox | U 30x30 à 60x45, câbles Ø3 à Ø10 |
+| Cornières, fers T, UPN, IPE, HEA, HEB | séries usuelles |
+
+Les autres listes sont aussi complétées :
+- **Remplissages (22) :** + barreaudage rythmé, barreaux à lances, métal déployé, tôle ondulée, lames bois, verre opale, polycarbonate, panneau composite, filet inox.
+- **Poses :** + sabot en applique, encastré en réservation.
+- **Chapeaux de portail :** + double cintre, chapeau de gendarme inversé, fronton.
+- **Marches :** + tôle perforée, caillebotis pressé, bois sur cassette, pierre, verre.
+- **Platelages :** + caillebotis pressé, tôle perforée, composite, plancher collaborant.
+- **Finitions de rendu :** RAL 7016, 9005, noir sablé, 9010, 7035, 7022, 6005, 3004, 5003, 1015, 8019, galvanisé, inox brossé, Corten.
+
+## 🧱 Maçonnerie de contexte
+
+Chaque ouvrage peut être posé dans son contexte maçonné, pour un rendu et une implantation fiables :
+
+| Ouvrage | Maçonnerie générée |
+|---|---|
+| Garde-corps | dalle + revêtement, balcon + façade avec porte-fenêtre, muret / allège, toiture-terrasse + acrotère, escalier béton sous rampant |
+| Clôture | muret de soubassement (redans) + chaperon, piliers maçonnés + chapeaux, sol |
+| Portail | piliers maçonnés + chapeaux, murs de clôture latéraux, allée |
+| Escaliers | dalle basse, **plancher haut avec trémie** (longueur réelle pour l'escalier droit), murs d'échiffre, cage maçonnée (hélicoïdal), **main courante murale** sur supports |
+| Mezzanine, passerelle, auvent, pergola, portique, échelle | dalle et sol, mur d'adossement, culées, façade avec porte et seuil, terrasse, toiture-terrasse + acrotère |
+
+- **Matériaux :** béton banché ou brut, parpaing brut ou enduit, brique, brique rouge, pierre de taille, moellons, enduits, bardage bois, béton ciré.
+- **Sols :** béton, carrelage, parquet, résine, enrobé, pavés, gravier, gazon, terrasse bois, dallage pierre.
+- **Rendu 3D :** textures procédurales à l'échelle (blocs 20x50, briques, appareil de pierre…), ombres portées, et planchers hauts semi-transparents pour voir l'escalier. Le bouton **Maçonnerie** masque ou affiche le contexte.
+
+Contrôles liés à la maçonnerie :
+- **Garde-corps sur muret :** la hauteur de protection = muret + garde-corps si l'arase est à 600 mm ou plus. En dessous, elle se mesure depuis l'arase (interprétation à confirmer).
+- **Main courante murale :** signalée s'il n'y a pas de mur de ce côté.
+
+Dans SolidWorks, la maçonnerie est créée dans une **pièce séparée** (*Réglages › Générer la maçonnerie*), pour ne pas polluer la liste des pièces soudées.
+
+## 📐 Limons et traçage
+
+Les limons en **plat** sont modélisés en **tôle découpée** pour tous les escaliers à volées (droit, quart tournant, deux quarts, demi-tournant) :
+
+- **Contour :** coupe d'aplomb au sol, coupe verticale au chevêtre, ressaut aux paliers ; un tronçon par côté droit du bord.
+- **Développé par tronçon :** traits du dessus et du dessous de chaque marche (calque TRACAGE), repères M1, M2…, et **tableau des cotes de traçage** (position du nez, hauteur, profondeur).
+- **Onglet Développés :**
+  - copier le DXF de tous les développés ou d'un seul ;
+  - copier les cotes en CSV ;
+  - dans SolidWorks, enregistrer le DXF.
+
+Les limons profilés (UPN, tubes) restent des barres, posées au sol, avec coupes d'about à ajuster.
+
+---
+
 ## 🛠️ Dans SolidWorks
 
 1. Onglet **MetalForge → Configurateur** : la page s'ouvre dans SolidWorks.

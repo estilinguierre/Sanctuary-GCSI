@@ -171,6 +171,12 @@ namespace MetalForge.SwAddin
         private string GenerateAtomic(AtomicResult r)
         {
             var msg = Generate(r.Model);
+            if (_settings.BuildMasonry && r.Masonry.Plates.Count > 0)
+            {
+                var mb = new SwModelBuilder(_sw, _settings);
+                mb.Build(r.Masonry, weldment: false);
+                if (mb.Warnings.Count > 0) msg = (string.IsNullOrEmpty(msg) ? "" : msg + "\n• ") + "Maçonnerie : " + string.Join(" ; ", mb.Warnings);
+            }
             if (r.SurfaceCount == 0) return msg;
             var extra = "Surfaces de chaudronnerie non générées (" + string.Join(", ", r.SurfaceLabels) + ") : créer en Tôlerie (pli lofté / bride de base) à partir du développé DXF.";
             return string.IsNullOrEmpty(msg) ? extra : msg + "\n• " + extra;

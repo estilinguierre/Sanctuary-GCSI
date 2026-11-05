@@ -59,7 +59,9 @@ test('Verre encastré : pas de poteaux, profil U de pied', () => {
 test('Escalier droit : Blondel 630, 15 hauteurs, limons d\'une pièce, développé du limon', () => {
   const r = E.build('escalier-droit', {});
   const v = Object.fromEntries(r.values); eq(v['Hauteurs / marches'], '15 / 14'); eq(v['2h + g'], '630 mm');
-  eq(r.members.filter(m => m.role === 'Limon').length, 2); ok(r.flats.some(f => /Limon/.test(f.name)));
+  eq(r.plates.filter(p => p.role === 'Limon tôle').length, 2, 'limons tôle'); eq(r.flats.filter(f => /^Limon/.test(f.name)).length, 2, 'développés de limons');
+  ok(r.plates.filter(p => p.role === 'Limon tôle').every(p => Math.min(...p.outline.map(q => q[1])) >= -0.01), 'coupe au sol');
+  ok(r.flats[0].table.length === 14, 'cotes de traçage');
   eq(r.plates.filter(p => p.role === 'Marche').length, 14);
 });
 
@@ -138,6 +140,51 @@ test('Exports : DXF R12 et CSV', () => {
 
 test('Débit : barres de 6 m respectées', () => {
   const r = E.build('cloture', {}); r.nesting.forEach(n => n.bars.forEach(b => ok(b.rest >= -0.5, 'barre dépassée')));
+});
+
+test('Dimensionnement automatique : le plus léger conforme', () => {
+  const pr = E.build('garde-corps', {}), pu = E.build('garde-corps', { usage: 'public' });
+  ok(pr.auto.length && pr.auto[0].found, 'auto résolu');
+  ok(E.profile(pu.auto[0].id).kgm >= E.profile(pr.auto[0].id).kgm, 'charge publique → poteau au moins aussi lourd');
+  ok(has(pr, 'Résistance poteau', 'ok') || has(pr, 'Résistance poteau', 'warn'));
+  const forced = E.build('garde-corps', { post: 'TC30x30x2', usage: 'public' }); ok(has(forced, 'Résistance poteau', 'fail'), 'profil imposé conservé');
+});
+
+test('Listes déroulantes complètes (mains courantes : moulurées, bois, ronds, plats, tubes…)', () => {
+  const gc = E.schema().find(f => f.id === 'garde-corps'), mc = gc.params.find(q => q.k === 'mc');
+  const names = mc.groups.map(g => g.g);
+  ['Mains courantes moulurées', 'Mains courantes bois', 'Tubes ronds acier', 'Tubes ronds inox', 'Tubes ovales et oblongs', 'Tubes rectangulaires', 'Tubes carrés', 'Plats', 'Profils U (lisse sur verre)', 'Ronds pleins']
+    .forEach(n => ok(names.includes(n), 'groupe manquant : ' + n));
+  let count = 0; E.schema().forEach(f => f.params.filter(q => q.t === 'prof').forEach(q => q.groups.forEach(g => g.o.forEach(o => { E.profile(o[0]); count++; }))));
+  ok(count > 3000, 'options de profils : ' + count);
+  ok(E.INFILLS.length >= 22, 'remplissages');
+});
+
+test('Limons tôle : contour exact et développés pour tous les escaliers à volées', () => {
+  [['escalier-droit', 2], ['escalier-quart', 4], ['escalier-deux-quarts', 6], ['escalier-demi', 6]].forEach(([id, n]) => {
+    const r = E.build(id, {}), lim = r.plates.filter(p => p.role === 'Limon tôle');
+    eq(lim.length, n, id + ' tronçons');
+    ok(lim.every(p => Math.min(...p.outline.map(q => q[1])) >= -0.01), id + ' : aucun limon sous le sol');
+    ok(r.flats.filter(f => /^Limon/.test(f.name)).length === n, id + ' développés');
+    ok(has(r, 'Hauteur du limon', 'ok'), id + ' hauteur constructive');
+  });
+});
+
+test('Maçonnerie : supports, piliers, trémie, murs, contexte', () => {
+  const mu = E.build('garde-corps', { support: 'muret', muretH: 600, H: 400 });
+  ok(mu.masonry.some(x => x.role === 'Muret')); ok(has(mu, 'Hauteur de protection', 'ok'), 'muret 600 + 400 = 1000');
+  ok(E.build('portail', {}).masonry.filter(x => x.role === 'Pilier maçonné').length === 2);
+  const st = E.build('escalier-droit', { walls: 'both', mcMural: 'int' });
+  ok(st.masonry.some(x => x.role === 'Plancher haut') && st.masonry.filter(x => x.role === "Mur d'échiffre").length === 2);
+  ok(st.members.some(m => m.role === 'Main courante murale'));
+  ok(Object.fromEntries(st.values)['Trémie'].startsWith('3400'), 'trémie = longueur saisie');
+  ['mezzanine', 'passerelle', 'auvent', 'pergola', 'portique', 'echelle', 'cloture', 'escalier-helicoidal'].forEach(id => ok(E.build(id, {}).masonry.length > 0, id));
+});
+
+test('Nouvelles options : chapeaux, marches, platelages', () => {
+  ['double-cintre', 'gendarme-inverse', 'pointe'].forEach(t => ok(E.build('portail', { top: t }).compliant, t));
+  ['perforee', 'verre', 'pierre', 'bois-acier', 'caillebotis-presse'].forEach(t => ok(E.build('escalier-quart', { tread: t }).compliant, t));
+  ['caillebotis-presse', 'tole-perforee', 'composite', 'collaborant'].forEach(t => ok(E.build('mezzanine', { deck: t }).plates.length > 0, t));
 });
 
 console.log((failed ? '✖ ' : '✔ ') + (n - failed) + ' / ' + n + ' tests');

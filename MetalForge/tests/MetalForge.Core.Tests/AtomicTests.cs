@@ -108,5 +108,43 @@ namespace MetalForge.Core.Tests
             Assert.Equal(2800, proj.Max(q => q.Y), 3);
             Assert.Contains("<polygon", SvgDrawings.FrontView(r.Model));
         }
+    
+        [Fact]
+        public void Every_dropdown_profile_is_known_in_csharp_with_same_mass()
+        {
+            var ids = Engine.Value.Families.SelectMany(f => f.Params).Where(p => p.Type == "prof").SelectMany(p => p.Options).Select(o => o.Key)
+                            .Where(k => k != "__auto").Distinct().ToList();
+            Assert.True(ids.Count > 300, "profils : " + ids.Count);
+            foreach (var id in ids)
+            {
+                Assert.True(Profiles.ProfileCatalog.TryGet(id, out var p), "inconnu en C# : " + id);
+                double js = Engine.Value.ProfileKgPerMeter(id);
+                Assert.InRange(p.MassPerMeter, js * 0.97, js * 1.03);
+            }
+        }
+
+        [Fact]
+        public void Masonry_and_auto_choices_are_imported()
+        {
+            var r = Engine.Value.Build("portail");
+            Assert.Contains(r.Masonry.Plates, p => p.Role == "Pilier maçonné" && p.Plane == PlatePlane.XZ);
+            var m = Engine.Value.Build("mezzanine");
+            Assert.Equal(3, m.AutoChoices.Count);
+            Assert.All(m.AutoChoices, a => Assert.True(Profiles.ProfileCatalog.TryGet(a.Profile, out _)));
+            var s = Engine.Value.Build("escalier-quart");
+            Assert.Equal(4, s.Model.Plates.Count(p => p.Role == "Limon tôle"));
+            Assert.Contains(s.Flats, f => f.Name.StartsWith("Limon") && f.Table.Count > 0);
+        }
+
+        [Fact]
+        public void Profile_parameters_offer_auto_and_grouped_lists()
+        {
+            var gc = Engine.Value.Families.First(f => f.Id == "garde-corps");
+            var post = gc.Params.First(p => p.Key == "post");
+            Assert.Equal("__auto", post.Options[0].Key);
+            Assert.Contains("Mains courantes moulurées", gc.Params.First(p => p.Key == "mc").Groups);
+            var d = new AtomicDesigner(Engine.Value, "garde-corps");
+            Assert.StartsWith("Auto", (string)TypeDescriptor.GetProperties(d.Bag)["post"].GetValue(d.Bag));
+        }
     }
 }

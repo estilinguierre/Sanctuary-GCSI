@@ -4,7 +4,7 @@ Complément (add-in) **Windows / SolidWorks** et **configurateur web** qui appor
 (type MetalCAD, HiCAD Serrurerie, TopSolid'Steel…) : garde-corps, clôtures, portails, escaliers de tous types, structures,
 pliage et chaudronnerie, avec contrôles normatifs, débit optimisé, nomenclature, devis et développés DXF.
 
-## 🧩 Configurateur atomique (nouveau)
+## 🧩 Configurateur atomique et automatique
 
 Un moteur unique de **briques paramétrables** construit **21 ouvrages** :
 - **atomes :** profilé, tôle, verre, câble, platine, gond… ;
@@ -12,6 +12,15 @@ Un moteur unique de **briques paramétrables** construit **21 ouvrages** :
 - **ouvrages :** les 21 familles complètes.
 
 Le même moteur tourne dans le navigateur (aperçu 3D, téléphone compris) et dans SolidWorks, où il génère la pièce mécano-soudée.
+
+- 🤖 **Dimensionnement automatique** : chaque profil structurel prend le plus léger qui passe les vérifications.
+- 📋 **Listes complètes** : plus de 300 profilés groupés (mains courantes moulurées, bois, ovales, U pour verre, tubes, plats, ronds, torsadés…), 22 remplissages, 8 formes de chapeau, 10 types de marches, 15 finitions.
+- 🧱 **Maçonnerie de contexte** : dalles, trémies, murets, acrotères, piliers, murs d'échiffre, façades, sols texturés, avec ombres pour un rendu réaliste.
+- 📐 **Limons tôle** au contour exact pour tous les escaliers à volées, avec développés, cotes de traçage et DXF.
+
+| Balcon en U avec façade | Portail entre piliers maçonnés | Demi-tournant en cage maçonnée |
+|---|---|---|
+| ![Balcon](docs/images/configurateur-balcon.png) | ![Portail](docs/images/configurateur-portail-maconnerie.png) | ![Demi-tournant](docs/images/configurateur-demi-maconnerie.png) |
 
 - ▶️ Ouvrir `web/configurateur/index.html` dans un navigateur, ou la commande **Configurateur** dans SolidWorks.
 - 📖 Détail des briques, de l'éventail et des limites : **[docs/CONFIGURATEUR.md](docs/CONFIGURATEUR.md)**.
@@ -85,7 +94,7 @@ flowchart LR
 ```
 
 - **`MetalForge.Core`** — tout le calcul métier, sans dépendance à SolidWorks : testable, réutilisable
-  (application autonome, service web…), qui exécute aussi le moteur atomique `engine.js` via Jint. **98 tests unitaires C# + 22 tests du moteur JavaScript.**
+  (application autonome, service web…), qui exécute aussi le moteur atomique `engine.js` via Jint. **101 tests unitaires C# + 27 tests du moteur JavaScript.**
 - **`MetalForge.SwAddin`** — le complément COM (.NET Framework 4.8, x64) : commandes, fenêtres WinForms,
   génération de la géométrie via l'API SolidWorks.
 

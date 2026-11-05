@@ -108,16 +108,20 @@ namespace MetalForge.Core.Atomic
                 var v = _bag.Values[_p.Key];
                 if (_p.Type == "num") return Convert.ToDouble(v, CultureInfo.InvariantCulture);
                 if (_p.Type == "bool") return v is bool b && b;
-                if (_p.Type == "sel") return _p.Options.FirstOrDefault(o => o.Key == Convert.ToString(v, CultureInfo.InvariantCulture)).Value ?? Convert.ToString(v, CultureInfo.InvariantCulture);
+                if (_p.Type == "sel" || _p.Type == "prof")
+                {
+                    var key = Convert.ToString(v, CultureInfo.InvariantCulture);
+                    return _p.Options.FirstOrDefault(o => string.Equals(o.Key, key, StringComparison.OrdinalIgnoreCase)).Value ?? key;
+                }
                 return Convert.ToString(v, CultureInfo.InvariantCulture);
             }
             public override void SetValue(object c, object v)
             {
-                if (_p.Type == "sel") { var o = _p.Options.FirstOrDefault(x => x.Value == (string)v); _bag.Values[_p.Key] = o.Key ?? v; }
+                if (_p.Type == "sel" || _p.Type == "prof") { var o = _p.Options.FirstOrDefault(x => x.Value == (string)v); _bag.Values[_p.Key] = o.Key ?? v; }
                 else _bag.Values[_p.Key] = v;
             }
             public override TypeConverter Converter => _p.Type == "sel" ? new Choices(_p.Options.Select(o => o.Value).ToArray(), true)
-                                                     : _p.Type == "prof" ? new Choices(Profiles.ProfileCatalog.All.Select(x => x.Id).OrderBy(x => x).ToArray(), false)
+                                                     : _p.Type == "prof" ? new Choices(_p.Options.Select(o => o.Value).ToArray(), false)
                                                      : base.Converter;
         }
 

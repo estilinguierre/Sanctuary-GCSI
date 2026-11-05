@@ -97,6 +97,12 @@ textarea { width: 100%; min-height: 140px; font: 12px var(--mono); background: v
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
 .costin { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 18px; margin-bottom: 10px; }
 .note { color: var(--mute); font-size: 12px; }
+.hint { grid-column: 1 / -1; font: 11.5px var(--mono); color: var(--minium); margin-top: -2px; }
+.field.wide { grid-template-columns: 1fr; gap: 4px; }
+.flathead { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.flatcard { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; margin-bottom: 14px; }
+.flatcard h3 { margin-top: 2px; }
+.vtools select { font: 500 12px var(--body); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; max-width: 170px; }
 @media (max-width: 860px) {
   .app { display: block; height: auto; }
   main { display: flex; flex-direction: column; }
@@ -125,6 +131,15 @@ textarea { width: 100%; min-height: 140px; font: 12px var(--mono); background: v
         <div class="vtools">
           <button id="v-iso" type="button">3D</button><button id="v-front" type="button">Face</button><button id="v-top" type="button">Dessus</button><button id="v-side" type="button">Côté</button>
           <button id="v-wire" type="button" aria-pressed="false">Filaire</button>
+          <button id="v-mason" type="button" aria-pressed="true">Maçonnerie</button>
+          <label class="sr" for="v-ral" hidden>Finition</label>
+          <select id="v-ral" aria-label="Finition de l'acier">
+            <option value="atomes">Couleur par brique</option><option value="7016" selected>RAL 7016 gris anthracite</option><option value="9005">RAL 9005 noir foncé</option>
+            <option value="2100">Noir sablé 2100</option><option value="9010">RAL 9010 blanc pur</option><option value="7035">RAL 7035 gris clair</option>
+            <option value="7022">RAL 7022 gris terre d'ombre</option><option value="6005">RAL 6005 vert mousse</option><option value="3004">RAL 3004 rouge pourpre</option>
+            <option value="5003">RAL 5003 bleu saphir</option><option value="1015">RAL 1015 ivoire clair</option><option value="8019">RAL 8019 brun gris</option>
+            <option value="galva">Galvanisé à chaud</option><option value="inox">Inox brossé</option><option value="corten">Acier Corten</option>
+          </select>
         </div>
         <div class="vinfo" id="vinfo"></div>
         <div class="err" id="err" hidden></div>
@@ -152,7 +167,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const fmt = (v, d = 0) => Number(v).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem('mf.' + k) || 'null'); localStorage.setItem('mf.' + k, JSON.stringify(v)); } catch (e) { return null; } }
 
-const state = { fam: store('fam') || 'garde-corps', params: {}, tab: 'checks', result: null, cost: Object.assign({ acier: 1.9, rate: 55, margin: 25, finish: 'thermolaquage' }, store('cost') || {}) };
+const state = { custom: {}, fam: store('fam') || 'garde-corps', params: {}, tab: 'checks', result: null, cost: Object.assign({ acier: 1.9, rate: 55, margin: 25, finish: 'thermolaquage' }, store('cost') || {}) };
 SCHEMA.forEach(f => { state.params[f.id] = Object.assign(E.defaults(f.id), (store('p.' + f.id) || {})); });
 if (!E.families[state.fam]) state.fam = 'garde-corps';
 
@@ -171,7 +186,7 @@ const ATOM_TAG = { 'Poteaux': 'atome', 'Main courante': 'atome', 'Lisse basse': 
   'Cadre': 'assemblage', 'Piliers': 'atome', 'Quincaillerie & sécurité': 'atome', 'Ossature': 'assemblage', 'Plancher': 'atome', 'Crinoline': 'assemblage', 'Échelle': 'atome', 'Outillage': 'procédé', 'Tôle': 'atome', 'Forme': 'géométrie', 'Toiture': 'assemblage', 'Couverture': 'atome', 'Accès': 'ouvrage' };
 function visible(q, p) { if (!q.show) return true; const [k, ...vals] = q.show; return vals.some(v => v === p[k] || String(v) === String(p[k])); }
 function renderParams() {
-  const f = E.families[state.fam], p = state.params[state.fam], groups = [];
+  const f = SCHEMA.find(x => x.id === state.fam), p = state.params[state.fam], groups = [];
   f.params.forEach(q => { let g = groups.find(x => x.name === q.g); if (!g) groups.push(g = { name: q.g, items: [] }); g.items.push(q); });
   const lists = new Set(f.params.filter(q => q.list).map(q => q.list));
   let h = `<div class="ptitle">${esc(f.label)}</div><p class="pdesc">${esc(f.cat)} · ${f.params.length} paramètres · chaque groupe est une brique réutilisable</p>`;
@@ -183,27 +198,34 @@ function renderParams() {
       let ctl;
       if (q.t === 'sel') ctl = `<select id="${id}" data-k="${q.k}">${q.o.map(o => `<option value="${esc(o[0])}" ${String(o[0]) === String(v) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`;
       else if (q.t === 'bool') ctl = `<input id="${id}" data-k="${q.k}" type="checkbox" ${v ? 'checked' : ''}>`;
-      else if (q.t === 'prof') ctl = `<input id="${id}" data-k="${q.k}" type="text" list="dl-${q.list}" value="${esc(v)}" spellcheck="false" autocomplete="off">`;
+      else if (q.t === 'prof' && state.custom[state.fam + '.' + q.k]) ctl = `<input id="${id}" data-k="${q.k}" type="text" value="${esc(v === '__auto' ? '' : v)}" placeholder="ex. TR90x45x3" spellcheck="false" autocomplete="off"><button class="btn" type="button" data-list="${q.k}" title="Revenir à la liste">Liste</button>`;
+      else if (q.t === 'prof') {
+        const V = String(v).toUpperCase(), known = (q.groups || []).some(g => g.o.some(o => o[0] === V));
+        ctl = `<select id="${id}" data-k="${q.k}">${q.auto ? `<option value="__auto" ${v === '__auto' ? 'selected' : ''}>Auto — le plus léger conforme</option>` : ''}`
+          + (q.groups || []).map(g => `<optgroup label="${esc(g.g)}">${g.o.map(o => `<option value="${o[0]}" ${o[0] === V ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</optgroup>`).join('')
+          + (!known && v !== '__auto' ? `<option value="${esc(v)}" selected>Personnalisé : ${esc(v)}</option>` : '') + `<option value="__custom">Autre profil (saisie libre)…</option></select>`;
+      }
       else if (q.t === 'text') ctl = `<input id="${id}" data-k="${q.k}" type="text" value="${esc(v)}" spellcheck="false">`;
       else ctl = `<input id="${id}" data-k="${q.k}" type="number" inputmode="decimal" step="${q.step || 1}" value="${esc(v)}">`;
-      h += `<div class="field"><label for="${id}">${esc(q.l)}</label><div class="ctl">${ctl}${q.u ? `<span class="u">${esc(q.u)}</span>` : ''}</div></div>`;
+      h += `<div class="field${q.t === 'prof' ? ' wide' : ''}"><label for="${id}">${esc(q.l)}</label><div class="ctl">${ctl}${q.u ? `<span class="u">${esc(q.u)}</span>` : ''}</div>${q.t === 'prof' && v === '__auto' ? `<div class="hint" id="ah-${q.k}"></div>` : ''}</div>`;
     });
     h += `</details>`;
   });
-  h += [...lists].map(l => `<datalist id="dl-${l}">${(E.PROFILES[l] || []).map(x => `<option value="${x}">`).join('')}</datalist>`).join('');
   h += `<div class="row"><button class="btn" type="button" id="reset">Valeurs par défaut</button></div>`;
   const open = [...$('params').querySelectorAll('details.grp')].map(d => d.open);
   $('params').innerHTML = h;
   if (open.length) $('params').querySelectorAll('details.grp').forEach((d, i) => { if (open[i] !== undefined) d.open = open[i]; });
+  $('params').querySelectorAll('[data-list]').forEach(b => b.onclick = () => { delete state.custom[state.fam + '.' + b.dataset.list]; renderParams(); });
   $('reset').onclick = () => { state.params[state.fam] = E.defaults(state.fam); store('p.' + state.fam, null); renderParams(); rebuild(true); };
 }
 let tmr = null;
 $('params').addEventListener('input', e => {
   const el = e.target.closest('[data-k]'); if (!el) return;
-  const q = E.families[state.fam].params.find(x => x.k === el.dataset.k), p = state.params[state.fam];
+  const q = SCHEMA.find(x => x.id === state.fam).params.find(x => x.k === el.dataset.k), p = state.params[state.fam];
+  if (q.t === 'prof' && el.value === '__custom') { state.custom[state.fam + '.' + q.k] = true; renderParams(); $('p-' + q.k).focus(); return; }
   p[q.k] = q.t === 'bool' ? el.checked : q.t === 'num' ? (el.value === '' ? q.d : Number(el.value)) : el.value;
   store('p.' + state.fam, p);
-  if (q.t === 'sel' || q.t === 'bool') { const f = document.activeElement && document.activeElement.id; renderParams(); if (f && $(f)) $(f).focus(); }
+  if (q.t === 'sel' || q.t === 'bool' || (q.t === 'prof' && el.tagName === 'SELECT')) { const f = document.activeElement && document.activeElement.id; renderParams(); if (f && $(f)) $(f).focus(); }
   clearTimeout(tmr); tmr = setTimeout(() => rebuild(false), 160);
 });
 
@@ -213,6 +235,7 @@ function rebuild(fit) {
     state.result = E.build(state.fam, state.params[state.fam], { cost: costOpt() });
     $('err').hidden = true;
     draw(state.result, fit); renderStatus(); renderTabs(); renderPane();
+    (state.result.auto || []).forEach(a => { const el = $('ah-' + a.k); if (el) el.textContent = (a.found ? '→ ' : '⚠ ') + E.profile(a.id).label + (a.found ? '' : ' (aucun profil suffisant)'); });
   } catch (e) { $('err').hidden = false; $('err').textContent = 'Paramètres impossibles : ' + e.message; }
 }
 function costOpt() { const c = state.cost; return { acier: +c.acier, rate: +c.rate, margin: +c.margin, finish: c.finish }; }
@@ -258,7 +281,23 @@ function renderPane() {
       P.querySelectorAll('[data-c]').forEach(el => el.addEventListener('change', () => { state.cost[el.dataset.c] = el.value; store('cost', state.cost); rebuild(false); }));
       break;
     }
-    case 'flats': P.innerHTML = r.flats.length ? `<div class="flats">${r.flats.map(flatSvg).join('')}</div>` : `<p class="note">Aucun développé pour cet ouvrage. Développés disponibles : pliage, virole, tronc de cône, piquage, trémie, limon tôle et marches pliées d'escalier droit.</p>`; break;
+    case 'flats': {
+      if (!r.flats.length) { P.innerHTML = `<p class="note">Aucun développé pour cet ouvrage. Développés et traçages disponibles : limons tôle de tous les escaliers à volées (choisir un plat en profil de limon), marches pliées, crémaillères, pliage, virole, tronc de cône, piquage, trémie.</p>`; break; }
+      P.innerHTML = `<div class="flathead"><b>${r.flats.length} développé(s)</b>
+          <button class="btn primary" type="button" id="f-all">Copier le DXF de tous les développés</button>
+          ${host ? `<button class="btn" type="button" id="f-save">Enregistrer le DXF…</button>` : ''}
+          <span class="note">DXF R12 : calques DECOUPE (contour), TRACAGE (marches), PLIAGE (plis), TEXTE.</span></div>
+          <textarea id="f-buf" hidden></textarea>
+          <div class="flats">${r.flats.map((f, i) => `<div class="flatcard">${flatSvg(f)}
+            ${f.table ? `<div class="tablewrap"><table><thead><tr>${(f.cols || ['Repère', 'x', 'y', '']).map(c => `<th${c === (f.cols || [])[0] ? '' : ' class="n"'}>${esc(c)}</th>`).join('')}</tr></thead><tbody>${f.table.map(row => `<tr>${row.map((c, j) => `<td${j ? ' class="n"' : ''}>${typeof c === 'number' ? fmt(c, 1) : esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+            <div class="row"><button class="btn" type="button" data-fdxf="${i}">Copier le DXF</button>${f.table ? `<button class="btn" type="button" data-fcsv="${i}">Copier les cotes (CSV)</button>` : ''}</div></div>`).join('')}</div>`;
+      const copy = (txt, b) => navigator.clipboard.writeText(txt).then(() => { b.textContent = 'Copié'; }, () => { const t = $('f-buf'); t.hidden = false; t.value = txt; t.focus(); t.select(); b.textContent = 'Texte sélectionné : Ctrl+C'; });
+      $('f-all').onclick = e => copy(E.toDxf(r), e.target);
+      if (host) $('f-save').onclick = () => host.postMessage(JSON.stringify({ action: 'save', kind: 'dxf', name: r.name + ' - developpes.dxf', content: E.toDxf(r) }));
+      P.querySelectorAll('[data-fdxf]').forEach(b => b.onclick = () => copy(E.toDxf({ flats: [r.flats[+b.dataset.fdxf]] }), b));
+      P.querySelectorAll('[data-fcsv]').forEach(b => b.onclick = () => { const f = r.flats[+b.dataset.fcsv]; copy([(f.cols || []).join(';')].concat(f.table.map(row => row.join(';').replace(/\./g, ','))).join('\r\n'), b); });
+      break;
+    }
     case 'export': {
       const json = JSON.stringify({ engine: 'MetalForge', family: state.fam, params: state.params[state.fam] }, null, 1);
       P.innerHTML = (host ? `<div class="row"><button class="btn primary" type="button" id="sw-build">Générer dans SolidWorks</button><button class="btn" type="button" id="sw-dxf">Enregistrer le DXF</button><button class="btn" type="button" id="sw-csv">Enregistrer la nomenclature</button></div>` : '')
@@ -290,10 +329,11 @@ function flatSvg(f) {
 // ------------------------------------------------------------------ vue 3D
 const vEl = $('viewer'), renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); vEl.prepend(renderer.domElement);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.01, 500), controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.12;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x8a9199, 1.2));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(4, 8, 6); scene.add(sun);
+const sun = new THREE.DirectionalLight(0xfff4e6, 2.2); sun.position.set(4, 8, 6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; scene.add(sun); scene.add(sun.target);
 const fill = new THREE.DirectionalLight(0xffffff, 0.5); fill.position.set(-6, 3, -4); scene.add(fill);
 let group = new THREE.Group(), grid = null, wire = false, bbox = new THREE.Box3();
 scene.add(group);
@@ -311,8 +351,62 @@ const MAT = { acier: () => new THREE.MeshStandardMaterial({ color: 0x8b949c, met
   bois: () => new THREE.MeshStandardMaterial({ color: 0xa07448, roughness: 0.8, side: THREE.DoubleSide }),
   grillage: () => new THREE.MeshStandardMaterial({ color: 0x55606a, metalness: 0.4, roughness: 0.6, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }),
   beton: () => new THREE.MeshStandardMaterial({ color: 0xb9b6ae, roughness: 0.95, side: THREE.DoubleSide }),
+  composite: () => new THREE.MeshStandardMaterial({ color: 0x5c6268, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide }),
+  filet: () => new THREE.MeshStandardMaterial({ color: 0xcfd3d6, metalness: 0.9, roughness: 0.3, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide }),
   polycarbonate: () => new THREE.MeshPhysicalMaterial({ color: 0xe8f1f2, transparent: true, opacity: 0.45, roughness: 0.2, side: THREE.DoubleSide, depthWrite: false }) };
 const S = 0.001;
+// ------------------------------------------------------------------ maçonnerie : textures procédurales (1 tuile = 1 m)
+function rng(seed) { let x = seed >>> 0 || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const TEX = {};
+const MASON_LOOK = {
+  'beton': ['#a9a8a2', 'beton'], 'beton-brut': ['#9c9b95', 'banche'], 'parpaing': ['#9fa09b', 'blocs'], 'parpaing-enduit': ['#d8d0c0', 'enduit'], 'brique': ['#b5643f', 'briques'],
+  'brique-rouge': ['#9a3b26', 'briques'], 'pierre': ['#cdbb98', 'appareil'], 'moellon': ['#b8a88a', 'moellons'], 'enduit-blanc': ['#ecebe5', 'enduit'], 'enduit-ton-pierre': ['#dcc9a6', 'enduit'],
+  'bardage-bois': ['#9c6d43', 'lames'], 'beton-cire': ['#8f8e8a', 'lisse'], 'beton-lisse': ['#b3b2ad', 'lisse'], 'carrelage': ['#d7d2c8', 'carreaux'], 'parquet': ['#b07c4f', 'parquet'],
+  'resine': ['#9ea3a6', 'lisse'], 'enrobe': ['#3d3e40', 'grain'], 'pave': ['#8e8678', 'paves'], 'gravier': ['#bdb4a2', 'gravier'], 'gazon': ['#5f8a3f', 'gazon'],
+  'terrasse-bois': ['#8a5f3c', 'lames'], 'dalle-pierre': ['#cfc3aa', 'dalles'], 'pierre-seuil': ['#d9d1bf', 'lisse']
+};
+function shade(hex, k) { const c = new THREE.Color(hex); c.offsetHSL(0, 0, k); return '#' + c.getHexString(); }
+function texture(mat) {
+  if (TEX[mat]) return TEX[mat];
+  const [base, kind] = MASON_LOOK[mat] || MASON_LOOK['beton'], N = 512, cv = document.createElement('canvas'); cv.width = cv.height = N;
+  const g = cv.getContext('2d'), R = rng(mat.length * 7919 + kind.length), px = N / 1000; // 1 px = 1000/512 mm
+  g.fillStyle = base; g.fillRect(0, 0, N, N);
+  const noise = (amt, n) => { for (let i = 0; i < n; i++) { g.fillStyle = shade(base, (R() - 0.5) * amt); g.fillRect(R() * N, R() * N, 1 + R() * 3, 1 + R() * 3); } };
+  const joints = (w, h, off, col, jw) => { g.strokeStyle = col; g.lineWidth = jw; for (let r = 0, y = 0; y < N + 1; r++, y += h * px) { g.beginPath(); g.moveTo(0, y); g.lineTo(N, y); g.stroke(); const o = (r % 2) * off * px; for (let x = -o; x < N; x += w * px) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + h * px); g.stroke(); } } };
+  const blocks = (w, h, off, var_, col, jw) => { for (let r = 0, y = 0; y < N; r++, y += h * px) { const o = (r % 2) * off * px; for (let x = -o; x < N; x += w * px) { g.fillStyle = shade(base, (R() - 0.5) * var_); g.fillRect(x + jw / 2, y + jw / 2, w * px - jw, h * px - jw); } } joints(w, h, off, col, jw); };
+  switch (kind) {
+    case 'blocs': noise(0.12, 9000); joints(500, 200, 250, shade(base, -0.12), 3); break;
+    case 'briques': blocks(250, 62.5, 125, 0.14, '#d9cfc0', 3); noise(0.08, 3000); break;
+    case 'appareil': blocks(500, 250, 200, 0.1, shade(base, 0.12), 3); noise(0.1, 6000); break;
+    case 'moellons': for (let i = 0; i < 70; i++) { const x = R() * N, y = R() * N, w = 40 + R() * 80, h = 25 + R() * 45; g.fillStyle = shade(base, (R() - 0.5) * 0.28); g.beginPath(); g.ellipse(x, y, w / 2, h / 2, R() * 0.5, 0, 7); g.fill(); g.strokeStyle = shade(base, -0.25); g.lineWidth = 2; g.stroke(); } break;
+    case 'banche': noise(0.1, 12000); g.strokeStyle = shade(base, -0.08); g.lineWidth = 2; for (let y = 0; y < N; y += 500 * px) { g.beginPath(); g.moveTo(0, y); g.lineTo(N, y); g.stroke(); } g.fillStyle = shade(base, -0.3); [[250, 250], [750, 250], [250, 750], [750, 750]].forEach(q => { g.beginPath(); g.arc(q[0] * px, q[1] * px, 6, 0, 7); g.fill(); }); break;
+    case 'carreaux': blocks(600, 600, 0, 0.05, shade(base, -0.18), 3); break;
+    case 'dalles': blocks(500, 500, 250, 0.1, shade(base, -0.2), 4); noise(0.08, 4000); break;
+    case 'paves': blocks(200, 100, 100, 0.16, shade(base, -0.25), 3); break;
+    case 'parquet': for (let y = 0; y < N; y += 140 * px) { let x = -R() * 300 * px; while (x < N) { const l = (600 + R() * 600) * px; g.fillStyle = shade(base, (R() - 0.5) * 0.16); g.fillRect(x + 1, y + 1, l - 2, 140 * px - 2); x += l; } } break;
+    case 'lames': for (let x = 0; x < N; x += 140 * px) { g.fillStyle = shade(base, (R() - 0.5) * 0.16); g.fillRect(x + 2, 0, 140 * px - 4, N); } for (let i = 0; i < 400; i++) { g.strokeStyle = shade(base, -0.12); g.beginPath(); const x = R() * N, y = R() * N; g.moveTo(x, y); g.lineTo(x + (R() - 0.5) * 4, y + 30 + R() * 60); g.stroke(); } break;
+    case 'gazon': for (let i = 0; i < 26000; i++) { g.fillStyle = shade(base, (R() - 0.45) * 0.25); g.fillRect(R() * N, R() * N, 1, 2 + R() * 3); } break;
+    case 'gravier': for (let i = 0; i < 9000; i++) { g.fillStyle = shade(base, (R() - 0.5) * 0.35); g.beginPath(); g.arc(R() * N, R() * N, 1 + R() * 2.5, 0, 7); g.fill(); } break;
+    case 'grain': noise(0.3, 30000); break;
+    case 'enduit': noise(0.06, 20000); break;
+    default: noise(0.05, 8000);
+  }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return (TEX[mat] = t);
+}
+function masonMesh(ms) {
+  const shape = new THREE.Shape(ms.poly.map(q => new THREE.Vector2(q[0] * S, q[1] * S)));
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: ms.h * S, bevelEnabled: false });
+  const look = MASON_LOOK[ms.material] || MASON_LOOK.beton;
+  const mat = new THREE.MeshStandardMaterial({ map: texture(ms.material), roughness: ['lisse', 'carreaux'].includes(look[1]) ? 0.55 : 0.92, metalness: 0, color: 0xffffff });
+  if (/Plancher haut|Toiture|Mur d'échiffre|Mur de cage|Mur d'adossement/.test(ms.role) || (ms.role === 'Revêtement' && ms.y0 > 300)) { mat.transparent = true; mat.opacity = 0.38; mat.depthWrite = false; }
+  const mesh = new THREE.Mesh(geo, mat); mesh.rotation.x = Math.PI / 2; mesh.position.y = (ms.y0 + ms.h) * S; mesh.receiveShadow = true; mesh.castShadow = ms.h > 30;
+  return mesh;
+}
+const RAL = { '7016': [0x383e42, 0.35, 0.55], '9005': [0x0e0e10, 0.3, 0.5], '2100': [0x1d1d1f, 0.2, 0.85], '9010': [0xf1ede1, 0.15, 0.5], '7035': [0xcbd0cc, 0.2, 0.5],
+  '7022': [0x4b4d46, 0.3, 0.55], '6005': [0x0f4336, 0.3, 0.5], '3004': [0x6b1c23, 0.3, 0.5], '5003': [0x1d334a, 0.3, 0.5], '1015': [0xe6d2b5, 0.2, 0.55], '8019': [0x3f3a3a, 0.3, 0.55],
+  galva: [0xb4babe, 0.85, 0.42], inox: [0xcfd3d6, 0.95, 0.28], corten: [0x8b4a2b, 0.25, 0.9] };
+let finish = '7016', showMason = true;
 function sectionShape(p) {
   const s = new THREE.Shape(), w = p.B, h = p.H, t = p.T, tf = p.Tf || p.T;
   const R = (x, y, ww, hh) => { s.moveTo(x, y); s.lineTo(x + ww, y); s.lineTo(x + ww, y + hh); s.lineTo(x, y + hh); s.lineTo(x, y); };
@@ -362,15 +456,27 @@ function surfaceMesh(sf) {
 function draw(r, fit) {
   scene.remove(group); group.traverse(o => { if (o.geometry) o.geometry.dispose(); }); group = new THREE.Group();
   const mats = {};
-  r.members.forEach(m => { const c = colorFor(m.role); mats[c] = mats[c] || new THREE.MeshStandardMaterial({ color: c, metalness: 0.5, roughness: 0.45, wireframe: wire }); group.add(memberMesh(m, mats[c])); });
-  r.plates.forEach(pl => { const mm = plateMesh(pl); if (wire) mm.material.wireframe = true; group.add(mm); });
+  const ral = RAL[finish];
+  const steel = ral ? new THREE.MeshStandardMaterial({ color: ral[0], metalness: ral[1], roughness: ral[2], wireframe: wire }) : null;
+  r.members.forEach(m => {
+    const pr = E.profile(m.profile); let mt = steel;
+    if (pr.material === 'bois') mt = mats.bois = mats.bois || new THREE.MeshStandardMaterial({ map: texture('bardage-bois'), roughness: 0.75 });
+    else if (pr.material === 'inox' || pr.fam === 'CAB') mt = mats.inox = mats.inox || new THREE.MeshStandardMaterial({ color: 0xcfd3d6, metalness: 0.95, roughness: 0.28 });
+    if (!mt) { const c = colorFor(m.role); mt = mats[c] = mats[c] || new THREE.MeshStandardMaterial({ color: c, metalness: 0.5, roughness: 0.45, wireframe: wire }); }
+    const mesh = memberMesh(m, mt); mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh);
+  });
+  r.plates.forEach(pl => { const mm = plateMesh(pl); if (wire) mm.material.wireframe = true; if (steel && pl.material === 'acier') mm.material = steel; if (pl.opaque) { mm.material.opacity = 0.85; mm.material.color.set(0xeef3f2); } mm.castShadow = pl.material !== 'verre'; mm.receiveShadow = true; group.add(mm); });
+  if (showMason) (r.masonry || []).forEach(ms => group.add(masonMesh(ms)));
   r.surfaces.forEach(sf => group.add(surfaceMesh(sf)));
   scene.add(group);
   bbox = new THREE.Box3().setFromObject(group);
   if (grid) scene.remove(grid);
   const size = bbox.getSize(new THREE.Vector3()), span = Math.max(size.x, size.z, 2);
   grid = new THREE.GridHelper(Math.ceil(span * 1.6), Math.ceil(span * 1.6) * 2, 0x9aa3ab, 0xc9ced2); grid.material.opacity = 0.35; grid.material.transparent = true;
-  grid.position.set((bbox.min.x + bbox.max.x) / 2, Math.min(0, bbox.min.y), (bbox.min.z + bbox.max.z) / 2); scene.add(grid);
+  grid.position.set((bbox.min.x + bbox.max.x) / 2, Math.min(0, bbox.min.y) - 0.002, (bbox.min.z + bbox.max.z) / 2); grid.visible = !(showMason && (r.masonry || []).length); scene.add(grid);
+  const c = bbox.getCenter(new THREE.Vector3()), R2 = Math.max(size.length(), 1);
+  sun.position.copy(c.clone().add(new THREE.Vector3(0.45, 0.8, 0.55).multiplyScalar(R2))); sun.target.position.copy(c);
+  Object.assign(sun.shadow.camera, { left: -R2, right: R2, top: R2, bottom: -R2, near: 0.1, far: R2 * 3 }); sun.shadow.camera.updateProjectionMatrix();
   if (fit) view('iso');
 }
 function view(kind) {
@@ -380,6 +486,10 @@ function view(kind) {
 }
 ['iso', 'front', 'top', 'side'].forEach(k => $('v-' + k).addEventListener('click', () => view(k)));
 $('v-wire').addEventListener('click', e => { wire = !wire; e.target.setAttribute('aria-pressed', wire); draw(state.result, false); });
+$('v-mason').addEventListener('click', e => { showMason = !showMason; e.target.setAttribute('aria-pressed', showMason); draw(state.result, true); });
+try { finish = localStorage.getItem('mf.finish') || finish; } catch (e) { /* stockage indisponible */ }
+$('v-ral').value = finish;
+$('v-ral').addEventListener('change', e => { finish = e.target.value; try { localStorage.setItem('mf.finish', finish); } catch (x) { /* ignoré */ } draw(state.result, false); });
 function resize() { const w = vEl.clientWidth, h = vEl.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(vEl);
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });

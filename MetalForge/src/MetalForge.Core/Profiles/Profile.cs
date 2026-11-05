@@ -17,7 +17,8 @@ namespace MetalForge.Core.Profiles
         HEA,              // EN 10365
         FerT,             // EN 10055
         HEB,              // EN 10365
-        Cable             // câble inox 7x19
+        Cable,            // câble inox 7x19
+        Special           // mains courantes moulurées, tubes ovales / oblongs, U pour verre, bois, torsadés
     }
 
     /// <summary>
@@ -38,6 +39,11 @@ namespace MetalForge.Core.Profiles
         /// <summary>Masse linéique tabulée (kg/m). Si 0, elle est calculée depuis la section.</summary>
         public double TabulatedMassPerMeter { get; set; }
 
+        /// <summary>Profils spéciaux : libellé, aire et périmètre fournis par le catalogue.</summary>
+        public string SpecialLabel { get; set; }
+        public double SpecialArea { get; set; }
+        public double SpecialPerimeter { get; set; }
+
         public string Designation
         {
             get
@@ -54,6 +60,7 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.Corniere: return $"Cornière {f(B)}x{f(H)}x{f(T)}";
                     case ProfileFamily.FerT: return $"Fer T {f(B)}x{f(H)}x{f(T)}";
                     case ProfileFamily.Cable: return $"Câble inox Ø{f(B)}";
+                    case ProfileFamily.Special: return SpecialLabel ?? Id;
                     default: return Id; // UPN 120, IPE 200, HEA 140...
                 }
             }
@@ -75,6 +82,7 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.CarrePlein: return B * B;
                     case ProfileFamily.RondPlein:
                     case ProfileFamily.Cable: return Math.PI * B * B / 4.0;
+                    case ProfileFamily.Special: return SpecialArea;
                     case ProfileFamily.Corniere: return T * (B + H - T);
                     case ProfileFamily.FerT: return T * (B + H - T);
                     case ProfileFamily.UPN:
@@ -102,6 +110,7 @@ namespace MetalForge.Core.Profiles
                     case ProfileFamily.TubeRond:
                     case ProfileFamily.RondPlein:
                     case ProfileFamily.Cable: return Math.PI * B;
+                    case ProfileFamily.Special: return SpecialPerimeter;
                     case ProfileFamily.Plat: return 2 * (B + T);
                     case ProfileFamily.CarrePlein: return 4 * B;
                     case ProfileFamily.Corniere:

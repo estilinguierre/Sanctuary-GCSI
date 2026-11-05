@@ -32,7 +32,8 @@ namespace MetalForge.SwAddin.Sw
             _settings = settings;
         }
 
-        public ModelDoc2 Build(StructureModel model)
+        /// <param name="weldment">false : pièce de contexte (maçonnerie) sans fonction mécano-soudée.</param>
+        public ModelDoc2 Build(StructureModel model, bool weldment = true)
         {
             Warnings.Clear();
             var template = string.IsNullOrWhiteSpace(_settings.PartTemplate)
@@ -47,7 +48,7 @@ namespace MetalForge.SwAddin.Sw
             sk.DisplayWhenAdded = false;  // tracé beaucoup plus rapide
             try
             {
-                doc.FeatureManager.InsertWeldmentFeature();
+                if (weldment) doc.FeatureManager.InsertWeldmentFeature();
 
                 foreach (var grp in model.Members.GroupBy(m => m.ProfileId, StringComparer.OrdinalIgnoreCase))
                     BuildMembers(doc, grp.Key, grp.ToList());

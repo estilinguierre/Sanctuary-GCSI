@@ -15,7 +15,7 @@
   'use strict';
   var VERSION = '1.0.0';
   var DEG = Math.PI / 180;
-  var RHO = { acier: 7850, inox: 7900, alu: 2700, verre: 2500, bois: 550, grillage: 7850, beton: 2400, polycarbonate: 1200 };
+  var RHO = { acier: 7850, inox: 7900, alu: 2700, verre: 2500, bois: 550, grillage: 7850, filet: 7900, beton: 2400, polycarbonate: 1200, composite: 1500 };
 
   // ------------------------------------------------------------------ vecteurs [x, y, z]
   function V(x, y, z) { return [x, y, z]; }
@@ -115,7 +115,31 @@
       if (tk && isL && LTAB[tk]) p.kgm = LTAB[tk];
       if (tk && !isL && TTAB[tk]) p.kgm = TTAB[tk];
     }
-    if (!p) throw new Error('Profilé inconnu : « ' + id + ' ». Exemples : TC40x40x2, TR60x40x2, TRD42.4x2, PL40x8, RP12, CAB6, L40x40x4, UPN120, IPE200.');
+    if (!p && (m = /^(MCDR|MCBO|MCMO|MCB)(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)$/.exec(key))) {
+      // mains courantes pleines : demi-ronde, bombée, moulurée (acier), bois
+      var Bm = +m[2], Hm = +m[3], kf = { MCDR: Math.PI / 4, MCBO: 0.85, MCMO: 0.72, MCB: 1 }[m[1]];
+      p = { fam: m[1], B: Bm, H: Hm, T: Hm, A: Bm * Hm * kf, perim: m[1] === 'MCDR' ? Bm + Math.PI * Math.sqrt((Bm * Bm / 4 + Hm * Hm) / 2) : 2 * (Bm + Hm), sh: Hm, vw: Bm, wa: Bm,
+            label: { MCDR: 'Main courante demi-ronde ', MCBO: 'Main courante bombée ', MCMO: 'Main courante moulurée ', MCB: 'Main courante bois ' }[m[1]] + Bm + 'x' + Hm };
+      var rr = rects([[0, 0, Bm, Hm]]); p.sec = { A: p.A, Iy: rr.Iy * kf, Iz: rr.Iz * kf, Wy: rr.Wy * kf, Wz: rr.Wz * kf };
+      if (m[1] === 'MCB') { p.rho = RHO.bois; p.material = 'bois'; }
+      p.shape = m[1];
+    } else if (!p && (m = /^(MCCU|UV|OV|OB|TRDI)(\d+(?:\.\d+)?)X(\d+(?:\.\d+)?)(?:X(\d+(?:\.\d+)?))?$/.exec(key))) {
+      var fm = m[1], b1 = +m[2], h1 = m[4] ? +m[3] : +m[2], t1 = m[4] ? +m[4] : +m[3], A1;
+      if (fm === 'TRDI') { b1 = +m[2]; h1 = b1; t1 = +m[3]; A1 = Math.PI * (b1 - t1) * t1; }
+      else if (fm === 'OV') { var a2 = b1 / 2, c2 = h1 / 2; A1 = Math.PI * (3 * (a2 + c2) - Math.sqrt((3 * a2 + c2) * (a2 + 3 * c2))) * t1; }
+      else if (fm === 'OB') A1 = (2 * (b1 - h1) + Math.PI * h1) * t1;
+      else A1 = t1 * (b1 + 2 * (h1 - t1)); // MCCU (main courante creuse à gorge), UV (U pour verre)
+      p = { fam: fm, B: b1, H: h1, T: t1, A: A1, round: fm === 'TRDI', perim: fm === 'TRDI' ? Math.PI * b1 : fm === 'OV' ? A1 / t1 : 2 * (b1 + h1), sh: h1, vw: b1, wa: b1, shape: fm,
+            label: { MCCU: 'Main courante creuse ', UV: 'Profil U (lisse sur verre) ', OV: 'Tube ovale ', OB: 'Tube oblong ', TRDI: 'Tube inox Ø' }[fm] + (fm === 'TRDI' ? b1 + 'x' + t1 : b1 + 'x' + h1 + 'x' + t1) };
+      var ro = fm === 'MCCU' || fm === 'UV' ? rects([[0, 0, b1, t1], [0, t1, t1, h1 - t1], [b1 - t1, t1, t1, h1 - t1]])
+                                            : { A: A1, Iy: (b1 * Math.pow(h1, 3) - (b1 - 2 * t1) * Math.pow(h1 - 2 * t1, 3)) / 12 * 0.8, Iz: (h1 * Math.pow(b1, 3) - (h1 - 2 * t1) * Math.pow(b1 - 2 * t1, 3)) / 12 * 0.8 };
+      if (!ro.Wy) { ro.Wy = ro.Iy / (h1 / 2); ro.Wz = ro.Iz / (b1 / 2); }
+      p.sec = ro; if (fm === 'TRDI') { p.rho = RHO.inox; p.material = 'inox'; }
+    } else if (!p && (m = /^TOR(\d+(?:\.\d+)?)$/.exec(key))) {
+      var at = +m[1]; p = { fam: 'TOR', B: at, H: at, T: at, A: at * at, perim: 4 * at, sh: at, vw: at, wa: at, label: 'Carré torsadé ' + at, shape: 'TOR' };
+      var it = Math.pow(at, 4) / 12; p.sec = { A: at * at, Iy: it, Iz: it, Wy: it / (at / 2), Wz: it / (at / 2), Wpl: at * at * at / 4 };
+    }
+    if (!p) throw new Error('Profilé inconnu : « ' + id + ' ». Exemples : TC40x40x2, TR60x40x2, TRD42.4x2, PL40x8, RP12, CAB6, L40x40x4, UPN120, IPE200, MCDR40x8.');
     p.id = key;
     if (!p.A) p.A = p.sec.A;
     if (!p.kgm) p.kgm = p.A * 1e-6 * (p.rho || RHO.acier);
@@ -127,23 +151,63 @@
     return p;
   }
 
-  var PROFILES = {
-    poteau: ['TC40x40x3', 'TC40x40x4', 'TC50x50x3', 'TC50x50x4', 'TC60x60x4', 'TC80x80x4', 'TR60x40x3', 'TR80x40x4', 'TRD42.4x2.6', 'TRD48.3x3', 'PL50x12', 'PL60x15', 'PL80x15'],
-    mainCourante: ['TR40x20x2', 'TR40x27x2', 'TC40x40x2', 'TRD42.4x2', 'TRD48.3x2', 'TRD33.7x2', 'PL40x8', 'PL50x10', 'TR50x30x2'],
-    lisse: ['TR40x20x2', 'TC30x30x2', 'TC20x20x2', 'TR30x20x2', 'PL40x8', 'TRD26.9x2'],
-    barreau: ['TC20x20x1.5', 'TC20x20x2', 'CP14', 'CP16', 'RP14', 'RP16', 'TRD16x1.5', 'TRD20x2', 'PL30x8', 'PL40x8', 'TR30x15x1.5'],
-    cable: ['CAB4', 'CAB5', 'CAB6', 'CAB8'],
-    cadre: ['TR60x40x2', 'TR60x40x3', 'TC40x40x2', 'TC50x50x3', 'TR80x40x3', 'TR100x40x3'],
-    pilier: ['TC100x100x4', 'TC120x120x5', 'TC150x150x6', 'TC80x80x4', 'HEA140'],
-    limon: ['PL200x10', 'PL250x12', 'PL300x12', 'PL300x15', 'UPN160', 'UPN180', 'UPN200', 'TR150x100x5', 'TR200x100x5'],
-    limonCentral: ['TR150x100x5', 'TR200x100x5', 'TC150x150x6', 'HEA160', 'IPE200'],
-    poutre: ['IPE120', 'IPE140', 'IPE160', 'IPE180', 'IPE200', 'IPE220', 'IPE240', 'IPE270', 'IPE300', 'HEA140', 'HEA160', 'HEA200', 'UPN160', 'UPN200'],
-    poteauStructure: ['TC80x80x4', 'TC100x100x4', 'TC120x120x5', 'HEA120', 'HEA140', 'HEA160', 'HEB120', 'TRD114.3x3.6'],
-    corniere: ['L30x30x3', 'L40x40x4', 'L50x50x5', 'L60x60x6'],
-    fut: ['TRD114.3x3.6', 'TRD139.7x4', 'TRD168.3x4.5', 'TRD88.9x3.2'],
-    plat: ['PL40x5', 'PL40x8', 'PL50x6', 'PL50x8', 'PL60x10', 'PL80x8'],
-    echelon: ['TC25x25x2', 'RP20', 'RP25', 'TC30x30x2', 'TRD26.9x2.6']
+  // ------------------------------------------------------------------ listes déroulantes complètes (groupées par famille)
+  function ser(prefix, arr, fmt) { return arr.map(function (x) { return prefix + (fmt ? fmt(x) : x); }); }
+  function pairs(prefix, map) { var o = []; Object.keys(map).forEach(function (w) { map[w].forEach(function (t) { o.push(prefix + w + 'x' + t); }); }); return o; }
+  var GROUPS = {
+    'Mains courantes moulurées': ser('MCDR', ['40x8', '40x10', '45x10', '50x10', '50x12', '60x12']).concat(ser('MCBO', ['40x10', '45x12', '50x15', '60x15']), ser('MCMO', ['40x30', '45x35', '50x40', '60x45']), ser('MCCU', ['40x20x3', '50x30x3', '60x30x4'])),
+    'Mains courantes bois': ser('MCB', ['45x45', '50x40', '60x40', '70x45', '80x50', '90x21', '120x27']),
+    'Tubes ovales et oblongs': ser('OV', ['50x25x1.5', '60x30x2', '80x40x2']).concat(ser('OB', ['40x20x1.5', '50x20x2', '60x30x2', '80x30x2'])),
+    'Profils U (lisse sur verre)': ser('UV', ['30x30x3', '40x40x3', '50x40x4', '60x45x4']),
+    'Tubes ronds acier': ser('TRD', ['12x1.5', '16x1.5', '20x1.5', '20x2', '21.3x2', '25x2', '26.9x2', '26.9x2.6', '30x2', '33.7x2', '33.7x2.6', '40x2', '42.4x2', '42.4x2.6', '48.3x2', '48.3x3', '50x2', '60.3x2', '60.3x3', '76.1x3', '88.9x3.2', '101.6x3.6', '114.3x3.6', '139.7x4', '168.3x4.5']),
+    'Tubes ronds inox': ser('TRDI', ['25x1.5', '33.7x2', '42.4x2', '48.3x2', '50.8x1.5']),
+    'Tubes carrés': ser('TC', ['15x15x1.5', '20x20x1.5', '20x20x2', '25x25x2', '30x30x2', '30x30x3', '35x35x2', '40x40x2', '40x40x3', '40x40x4', '50x50x2', '50x50x3', '50x50x4', '60x60x3', '60x60x4', '60x60x5', '70x70x3', '70x70x4', '80x80x3', '80x80x4', '80x80x5', '90x90x4', '100x100x3', '100x100x4', '100x100x5', '100x100x6', '120x120x4', '120x120x5', '120x120x6', '140x140x5', '150x150x5', '150x150x6', '160x160x6', '180x180x6', '200x200x6', '200x200x8']),
+    'Tubes rectangulaires': ser('TR', ['30x15x1.5', '30x20x2', '40x20x2', '40x27x2', '40x30x2', '50x20x2', '50x25x2', '50x30x2', '60x20x2', '60x30x2', '60x40x2', '60x40x3', '70x30x2', '70x40x3', '80x20x2', '80x40x2', '80x40x3', '80x40x4', '80x60x3', '80x60x4', '100x20x2', '100x40x3', '100x50x3', '100x50x4', '100x60x4', '120x40x3', '120x60x4', '120x80x4', '120x80x5', '140x80x5', '150x50x4', '150x100x5', '160x80x5', '180x100x5', '200x100x5', '200x100x6']),
+    'Plats': pairs('PL', { 20: [3, 4, 5, 6, 8, 10], 25: [3, 4, 5, 6, 8, 10], 30: [3, 4, 5, 6, 8, 10, 12], 35: [5, 6, 8, 10], 40: [4, 5, 6, 8, 10, 12, 15, 20], 45: [5, 8, 10], 50: [4, 5, 6, 8, 10, 12, 15, 20],
+                               60: [5, 6, 8, 10, 12, 15, 20], 70: [8, 10], 80: [5, 6, 8, 10, 12, 15, 20], 90: [10], 100: [5, 6, 8, 10, 12, 15, 20], 120: [8, 10, 12, 15], 150: [8, 10, 12, 15], 160: [10],
+                               180: [10, 12], 200: [8, 10, 12, 15], 220: [10, 12], 250: [10, 12, 15], 300: [10, 12, 15], 350: [12, 15], 400: [15, 20] }),
+    'Ronds pleins': ser('RP', [6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 30, 32, 35, 40, 45, 50]),
+    'Carrés pleins': ser('CP', [8, 10, 12, 14, 16, 18, 20, 22, 25, 30, 35, 40]),
+    'Carrés torsadés': ser('TOR', [12, 14, 16, 18, 20]),
+    'Câbles inox': ser('CAB', [3, 4, 5, 6, 8, 10]),
+    'Cornières': ser('L', ['20x20x3', '25x25x3', '30x30x3', '30x30x4', '35x35x4', '40x40x4', '40x40x5', '45x45x5', '50x50x5', '50x50x6', '60x60x6', '70x70x7', '80x80x8', '100x100x10']),
+    'Fers T': ser('T', ['30x30x4', '35x35x4.5', '40x40x5', '50x50x6', '60x60x7']),
+    'UPN': Object.keys(TAB.UPN).map(function (k) { return 'UPN' + k; }), 'IPE': Object.keys(TAB.IPE).map(function (k) { return 'IPE' + k; }),
+    'HEA': Object.keys(TAB.HEA).map(function (k) { return 'HEA' + k; }), 'HEB': Object.keys(TAB.HEB).map(function (k) { return 'HEB' + k; })
   };
+  var LISTS = {
+    mainCourante: ['Mains courantes moulurées', 'Mains courantes bois', 'Tubes ronds acier', 'Tubes ronds inox', 'Tubes ovales et oblongs', 'Tubes rectangulaires', 'Tubes carrés', 'Plats', 'Profils U (lisse sur verre)', 'Ronds pleins', 'Carrés pleins'],
+    poteau: ['Tubes carrés', 'Tubes rectangulaires', 'Tubes ronds acier', 'Tubes ronds inox', 'Tubes ovales et oblongs', 'Plats', 'Carrés pleins', 'Ronds pleins', 'Cornières', 'Fers T'],
+    lisse: ['Tubes rectangulaires', 'Tubes carrés', 'Tubes ronds acier', 'Tubes ronds inox', 'Tubes ovales et oblongs', 'Plats', 'Cornières', 'Fers T', 'Ronds pleins', 'Carrés pleins', 'Profils U (lisse sur verre)'],
+    barreau: ['Carrés pleins', 'Carrés torsadés', 'Ronds pleins', 'Tubes carrés', 'Tubes ronds acier', 'Tubes ronds inox', 'Tubes rectangulaires', 'Tubes ovales et oblongs', 'Plats', 'Fers T', 'Câbles inox'],
+    cable: ['Câbles inox', 'Ronds pleins'],
+    cadre: ['Tubes rectangulaires', 'Tubes carrés', 'Tubes ronds acier', 'Cornières', 'Fers T', 'Plats', 'UPN'],
+    pilier: ['Tubes carrés', 'Tubes rectangulaires', 'Tubes ronds acier', 'HEA', 'HEB', 'IPE'],
+    limon: ['Plats', 'UPN', 'Tubes rectangulaires', 'IPE', 'HEA'],
+    limonCentral: ['Tubes rectangulaires', 'Tubes carrés', 'HEA', 'HEB', 'IPE', 'UPN'],
+    poutre: ['IPE', 'HEA', 'HEB', 'UPN', 'Tubes rectangulaires', 'Tubes carrés'],
+    poteauStructure: ['Tubes carrés', 'HEA', 'HEB', 'IPE', 'Tubes ronds acier', 'Tubes rectangulaires'],
+    corniere: ['Cornières', 'Fers T', 'Plats', 'UPN'],
+    fut: ['Tubes ronds acier', 'Tubes carrés'],
+    plat: ['Plats', 'Cornières', 'Fers T', 'Tubes rectangulaires', 'Mains courantes bois'],
+    echelon: ['Tubes carrés', 'Ronds pleins', 'Carrés pleins', 'Carrés torsadés', 'Tubes ronds acier']
+  };
+  /** Candidats du dimensionnement automatique (une série cohérente, du plus léger au plus lourd). */
+  var AUTO = {
+    poteau: function (p) { return p.fam === 'TC' && p.B >= 30; }, mainCourante: function (p) { return p.fam === 'TRD' && p.B >= 33; },
+    lisse: function (p) { return p.fam === 'TR'; }, cadre: function (p) { return p.fam === 'TR' && p.H >= 40; }, pilier: function (p) { return p.fam === 'TC' && p.B >= 80; },
+    limon: function (p) { return p.fam === 'PL' && p.B >= 150; }, limonCentral: function (p) { return p.fam === 'TR' && p.H >= 100; }, poutre: function (p) { return p.fam === 'IPE'; },
+    poteauStructure: function (p) { return p.fam === 'TC' && p.B >= 70; }, echelon: function (p) { return p.fam === 'TC' && p.B >= 20; }, barreau: function (p) { return p.fam === 'RP' && p.B >= 12; },
+    corniere: function (p) { return p.fam === 'L'; }, fut: function (p) { return p.fam === 'TRD' && p.B >= 88; }
+  };
+  function autoCandidates(list) {
+    var ids = []; (LISTS[list] || []).forEach(function (g) { ids = ids.concat(GROUPS[g]); });
+    return ids.map(profile).filter(AUTO[list] || function () { return true; }).sort(function (a, b) { return a.kgm - b.kgm; }).map(function (p) { return p.id; });
+  }
+  function profileOptions(list) {
+    return (LISTS[list] || Object.keys(GROUPS)).map(function (g) { return { g: g, o: GROUPS[g].map(function (id) { var p = profile(id); return [p.id, p.label + ' — ' + p.kgm.toFixed(2) + ' kg/m']; }) }; });
+  }
+  var PROFILES = {}; Object.keys(LISTS).forEach(function (k) { PROFILES[k] = [].concat.apply([], LISTS[k].map(function (g) { return GROUPS[g]; })); });
 
   // ------------------------------------------------------------------ modèle neutre
   /**
@@ -156,7 +220,7 @@
    */
   function Model(name) {
     this.name = name; this.members = []; this.plates = []; this.surfaces = []; this.flats = [];
-    this.checks = []; this.values = []; this.notes = []; this._c = {};
+    this.checks = []; this.values = []; this.notes = []; this.masonry = []; this._c = {};
   }
   Model.prototype.mark = function (prefix) { this._c[prefix] = (this._c[prefix] || 0) + 1; return prefix + this._c[prefix]; };
   Model.prototype.member = function (prefix, role, prof, a, b, opt) {
@@ -193,6 +257,12 @@
     this.plates.push(o); return o;
   };
   Model.prototype.surface = function (s) { this.surfaces.push(s); return s; };
+  /** ATOME maçonnerie : prisme vertical (contour en plan [x, z], du niveau y0 sur la hauteur h). */
+  Model.prototype.mason = function (role, material, poly, y0, h) {
+    if (!poly || poly.length < 3 || !(h > 0)) return null;
+    var o = { mark: this.mark('MA'), role: role, material: material, poly: poly.map(function (q) { return [round(q[0], 1), round(q[1], 1)]; }), y0: round(y0, 1), h: round(h, 1) };
+    this.masonry.push(o); return o;
+  };
   Model.prototype.flat = function (f) { this.flats.push(f); return f; };
   Model.prototype.check = function (level, rule, msg, ref) { this.checks.push({ level: level, rule: rule, msg: msg, ref: ref || '' }); };
   Model.prototype.ok = function (r, m, ref) { this.check('ok', r, m, ref); };
@@ -220,6 +290,7 @@
       self.plates.push(q);
     });
     o.surfaces.forEach(function (sf) { self.surfaces.push(sf); });
+    o.masonry.forEach(function (ms) { self.mason(ms.role, ms.material, ms.poly.map(function (q) { var w = T([q[0], 0, q[1]]); return [w[0], w[2]]; }), ms.y0 + off[1], ms.h); });
     o.flats.forEach(function (f) { self.flats.push(f); });
     o.checks.forEach(function (ch) { self.checks.push(ch); });
   };
@@ -229,7 +300,7 @@
   function polyArea(o) { var a = 0; for (var i = 0; i < o.length; i++) { var p = o[i], q = o[(i + 1) % o.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a) / 2; }
   function plateMass(p) {
     var A = polyArea(p.outline) * (p.plane === 'XZ' ? 1 : 1), vol = A * p.depth;
-    if (p.material === 'grillage') return polyArea(p.outline) * 1e-6 * (p.kgm2 || 4);
+    if (p.material === 'grillage' || p.material === 'filet') return polyArea(p.outline) * 1e-6 * (p.kgm2 || 4);
     var f = p.fillRatio == null ? 1 : p.fillRatio;
     return vol * 1e-9 * (RHO[p.material] || RHO.acier) * f;
   }
@@ -390,7 +461,9 @@
     ['barreaux', 'Barreaudage vertical'], ['lisses', 'Lisses horizontales'], ['cables', 'Câbles inox'], ['lames', 'Lames / claustra'],
     ['croisillons', 'Croisillons (X)'], ['tole', 'Tôle pleine'], ['perforee', 'Tôle perforée'], ['decoupe', 'Tôle découpée laser (motif)'],
     ['verre', 'Verre feuilleté'], ['grillage', 'Grillage / treillis soudé'], ['mixte', 'Mixte : soubassement + partie haute'],
-    ['industriel', 'Industriel : sous-lisse + plinthe'], ['aucun', 'Aucun']
+    ['industriel', 'Industriel : sous-lisse + plinthe'], ['barreaux-decales', 'Barreaudage rythmé (2 + 1)'], ['barreaux-lances', 'Barreaux à lances / pointes'],
+    ['metal-deploye', 'Métal déployé'], ['tole-ondulee', 'Tôle ondulée / nervurée'], ['lames-bois', 'Lames bois / composite'], ['verre-opale', 'Verre opale / sérigraphié'],
+    ['polycarbonate', 'Polycarbonate'], ['panneau-composite', 'Panneau composite aluminium'], ['filet-inox', 'Filet / maille inox'], ['aucun', 'Aucun']
   ];
 
   /**
@@ -402,6 +475,24 @@
     var plateFallback = function () { m.notes.push('Panneau non orthogonal : ' + t + ' remplacé par des barreaux.'); return infill(m, pn, Object.assign({}, spec, { type: 'barreaux' })); };
     switch (t) {
       case 'aucun': r.gap = pn.top(pn.s0) - pn.bot(pn.s0); break;
+      case 'barreaux-lances': { var vl = verticals(m, pn, spec.bar || 'CP16', spec.gap || 110, 'B', 'Barreau à lance', spec.over || 120); r.gap = vl.gap; r.desc = vl.count + ' barreaux à lance'; r.lances = true; break; }
+      case 'barreaux-decales': {
+        var bp = profile(spec.bar || 'TC20x20x1.5'), Wd = pn.s1 - pn.s0, pair = 2 * bp.vw + 40, gmax = spec.gap || 110;
+        var nu = Math.max(1, Math.ceil((Wd - gmax) / (pair + gmax) - 1e-9)), G = (Wd - nu * pair) / (nu + 1);
+        for (var u = 0; u < nu; u++) { var x0 = pn.s0 + G + u * (pair + G); [x0 + bp.vw / 2, x0 + bp.vw * 1.5 + 40].forEach(function (x) { m.member('B', 'Barreau', bp.id, pn.f.at(x, pn.bot(x), pn.w), pn.f.at(x, pn.top(x), pn.w)); }); }
+        r.gap = Math.max(G, 40); r.desc = nu + ' paires de barreaux'; break;
+      }
+      case 'metal-deploye': case 'filet-inox': {
+        var ksp = t === 'metal-deploye' ? 9.5 : 1.4;
+        if (!panelPlate(m, pn, 'G', t === 'metal-deploye' ? 'Métal déployé' : 'Filet inox', t === 'metal-deploye' ? 4 : 3, t === 'metal-deploye' ? 'grillage' : 'filet', { kgm2: ksp, mesh: spec.mesh || 40 }, 0)) return plateFallback();
+        r.gap = spec.mesh || 40; r.desc = t === 'metal-deploye' ? 'métal déployé' : 'filet inox'; break;
+      }
+      case 'tole-ondulee': case 'panneau-composite': case 'polycarbonate': case 'verre-opale': {
+        var def = { 'tole-ondulee': ['Tôle ondulée', 0.75, 'acier', 1.25], 'panneau-composite': ['Panneau composite alu', 4, 'composite', 1], polycarbonate: ['Polycarbonate', 8, 'polycarbonate', 0.25], 'verre-opale': ['Verre opale', glassThickness(spec.glass), 'verre', 1] }[t];
+        if (!panelPlate(m, pn, 'T', def[0], def[1], def[2], { fillRatio: def[3], opaque: t === 'verre-opale' }, t === 'verre-opale' ? 10 : 0)) return plateFallback();
+        r.gap = t === 'verre-opale' ? 10 : 0; r.glass = t === 'verre-opale'; r.desc = def[0]; break;
+      }
+      case 'lames-bois': { var lb2 = horizontals(m, pn, spec.slat && /^MCB/.test(String(spec.slat).toUpperCase()) ? spec.slat : 'MCB90x21', spec.gap || 15, 'LA', 'Lame bois'); r.gap = lb2.gap; r.horizLowest = lb2.lowest; r.climb = true; r.desc = lb2.count + ' lames bois'; break; }
       case 'barreaux': { var v = verticals(m, pn, spec.bar || 'TC20x20x1.5', spec.gap || 110, 'B', 'Barreau', spec.over || 0); r.gap = v.gap; r.desc = v.count + ' barreaux'; break; }
       case 'lisses': { var h = horizontals(m, pn, spec.rail || 'TR30x20x2', spec.gap || 110, 'LI', 'Lisse intermédiaire'); r.gap = h.gap; r.horizLowest = h.lowest; r.climb = true; r.desc = h.count + ' lisses'; break; }
       case 'lames': { var l = horizontals(m, pn, spec.slat || 'PL80x8', spec.gap || 20, 'LA', 'Lame', spec.slatRot || 0); r.gap = l.gap; r.horizLowest = l.lowest; r.climb = !(spec.slatRot > 30); r.desc = l.count + ' lames'; break; }
@@ -501,6 +592,52 @@
              mesh: p.mesh, wire: p.wire, split: p.split, lowerType: p.lowerType, upperType: p.upperType, toe: p.toe, over: p.over };
   }
 
+  // ================================================================== MAÇONNERIE & CONTEXTE (rendu, implantation)
+  var MASON = [['beton', 'Béton banché'], ['beton-brut', 'Béton brut de décoffrage'], ['parpaing', 'Parpaing (bloc béton) brut'], ['parpaing-enduit', 'Parpaing enduit'],
+               ['brique', 'Brique monomur / terre cuite'], ['brique-rouge', 'Brique rouge apparente'], ['pierre', 'Pierre de taille'], ['moellon', 'Moellons / pierre sèche'],
+               ['enduit-blanc', 'Enduit blanc'], ['enduit-ton-pierre', 'Enduit ton pierre'], ['bardage-bois', 'Bardage bois'], ['beton-cire', 'Béton ciré']];
+  var SOLS = [['beton-lisse', 'Dalle béton lissée'], ['carrelage', 'Carrelage'], ['parquet', 'Parquet'], ['resine', 'Sol résine'], ['enrobe', 'Enrobé'], ['pave', 'Pavés'],
+              ['gravier', 'Gravier'], ['gazon', 'Gazon'], ['terrasse-bois', 'Terrasse bois'], ['dalle-pierre', 'Dallage pierre']];
+  function mBox(m, role, mat, x0, z0, x1, z1, y0, h) { return m.mason(role, mat, [[Math.min(x0, x1), Math.min(z0, z1)], [Math.max(x0, x1), Math.min(z0, z1)], [Math.max(x0, x1), Math.max(z0, z1)], [Math.min(x0, x1), Math.max(z0, z1)]], y0, h); }
+  /** Bande de maçonnerie le long d'un segment de tracé, entre les décalages w0 et w1 (normale gauche). */
+  function mStrip(m, role, mat, A, B, w0, w1, y0, h, ext) {
+    var d = pnorm(psub(B, A)), n = [-d[1], d[0]], e = ext || 0, a = psub(A, pmul(d, e)), b = padd(B, pmul(d, e));
+    return m.mason(role, mat, [padd(a, pmul(n, w0)), padd(b, pmul(n, w0)), padd(b, pmul(n, w1)), padd(a, pmul(n, w1))], y0, h);
+  }
+  /** Dalle rectangulaire percée d'une trémie rectangulaire (jusqu'à 4 rectangles). */
+  function mSlab(m, role, mat, R, hole, y0, h) {
+    if (!hole) return mBox(m, role, mat, R[0], R[1], R[2], R[3], y0, h);
+    var hx0 = Math.max(R[0], hole[0]), hz0 = Math.max(R[1], hole[1]), hx1 = Math.min(R[2], hole[2]), hz1 = Math.min(R[3], hole[3]);
+    if (hx0 > R[0]) mBox(m, role, mat, R[0], R[1], hx0, R[3], y0, h);
+    if (hx1 < R[2]) mBox(m, role, mat, hx1, R[1], R[2], R[3], y0, h);
+    if (hz0 > R[1]) mBox(m, role, mat, hx0, R[1], hx1, hz0, y0, h);
+    if (hz1 < R[3]) mBox(m, role, mat, hx0, hz1, hx1, R[3], y0, h);
+  }
+  /** Mur plan (parallèle à X ou Z) avec ouvertures [{ s0, s1, y0, y1 }] le long du mur. */
+  function mWall(m, role, mat, A, B, w0, w1, y0, h, openings) {
+    var L = pdist(A, B), cuts = [0, L]; (openings || []).forEach(function (o) { cuts.push(clamp(o.s0, 0, L), clamp(o.s1, 0, L)); });
+    cuts = cuts.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+    var d = pnorm(psub(B, A));
+    for (var i = 0; i + 1 < cuts.length; i++) {
+      var s0 = cuts[i], s1 = cuts[i + 1], o = (openings || []).filter(function (op) { return op.s0 <= s0 + 1e-6 && op.s1 >= s1 - 1e-6; })[0];
+      var P0 = padd(A, pmul(d, s0)), P1 = padd(A, pmul(d, s1));
+      if (!o) { mStrip(m, role, mat, P0, P1, w0, w1, y0, h); continue; }
+      if (o.y0 > y0 + 1) mStrip(m, role, mat, P0, P1, w0, w1, y0, o.y0 - y0);
+      if (o.y1 < y0 + h - 1) mStrip(m, role, mat, P0, P1, w0, w1, o.y1, y0 + h - o.y1);
+    }
+  }
+  function masonParams(defs) {
+    var base = [
+      { k: 'masonMat', l: 'Matériau de maçonnerie', t: 'sel', d: defs.mat || 'beton', o: MASON, g: 'Maçonnerie & contexte' },
+      { k: 'floorMat', l: 'Revêtement de sol', t: 'sel', d: defs.floor || 'carrelage', o: SOLS, g: 'Maçonnerie & contexte' }
+    ];
+    return (defs.extra || []).concat(base);
+  }
+  function masonValue(m) {
+    var v = m.masonry.reduce(function (s, x) { return s + polyArea(x.poly) * x.h * 1e-9; }, 0);
+    if (v > 0) m.value('Maçonnerie de contexte (indicatif)', v.toFixed(2) + ' m³');
+  }
+
   // ================================================================== RÉFÉRENCES NORMATIVES (voir docs/NORMES.md)
   var N = {
     GC: 'NF P01-012:2024', CH: 'NF P06-111-2/A1', ISO3: 'NF EN ISO 14122-3', ISO4: 'NF EN ISO 14122-4', E85: 'NF E85-016',
@@ -535,7 +672,7 @@
   function railRun(m, pts, gy, o) {
     var post = profile(o.post), mc = profile(o.mc), lb = o.lb ? profile(o.lbProf) : null;
     var st = { gaps: [], spacing: 0, posts: 0, horizLowest: null, climb: false, length: 0, bottomGap: o.jeu, infill: [], toe: null, cables: false, glass: false };
-    var side = o.side || 1, wPost = o.pose === 'anglaise' || o.pose === 'deport' ? side * (post.wa / 2 + (o.pose === 'deport' ? 60 : 8) + (o.wExtra || 0)) : 0;
+    var side = o.side || 1, wPost = o.pose === 'anglaise' || o.pose === 'deport' || o.pose === 'sabot' ? side * (post.wa / 2 + (o.pose === 'deport' ? 60 : 8) + (o.wExtra || 0)) : 0;
     var noPosts = o.spec.type === 'verre' && o.spec.glassFix === 'encastre';
     // segments, longueurs cumulées, sommets « angle » (> 20°) qui reçoivent un poteau
     var segs = [], cum = [0];
@@ -564,7 +701,7 @@
       if (o.pose === 'francaise' && o.plate) {
         var cc = q.sg.f.at(q.s, g, w), a = o.plate[0] / 2, b = o.plate[1] / 2;
         m.plate('PL', 'Platine', 'XZ', [[cc[0] - a, cc[2] - b], [cc[0] + a, cc[2] - b], [cc[0] + a, cc[2] + b], [cc[0] - a, cc[2] + b]], o.plate[2], g + o.plate[2] / 2, o.plate[2]);
-      } else if ((o.pose === 'anglaise' || o.pose === 'deport') && q.sg.f.plane && o.plate) {
+      } else if ((o.pose === 'anglaise' || o.pose === 'deport' || o.pose === 'sabot') && q.sg.f.plane && o.plate) {
         var ff = q.sg.f, s = q.s, hh = o.plate[0];
         m.plate('PL', 'Platine latérale', ff.plane, [ff.uv(s - o.plate[1] / 2, g - o.drop), ff.uv(s + o.plate[1] / 2, g - o.drop), ff.uv(s + o.plate[1] / 2, g - o.drop + hh), ff.uv(s - o.plate[1] / 2, g - o.drop + hh)],
                 o.plate[2], ff.off(w - side * (post.wa / 2 + o.plate[2] / 2)), o.plate[2]);
@@ -615,8 +752,8 @@
       } else m.rule(st.maxGap <= 500, 'Vide entre éléments', f0(st.maxGap) + ' mm ≤ 500', f0(st.maxGap) + ' mm > 500 mm', N.ISO3);
       if (p.usage !== 'industriel') m.fail('Usage', 'Remplissage industriel non admis en logement / ERP (vides > 110 mm)', N.GC);
     } else {
-      var hMin = rampant ? 900 : (p.thickness >= 500 ? 800 : 1000);
-      m.rule(p.H >= hMin, 'Hauteur de protection', f0(p.H) + ' mm ≥ ' + hMin + (rampant ? ' (rampant)' : ''), f0(p.H) + ' mm < ' + hMin + ' mm', N.GC);
+      var hMin = rampant ? 900 : (p.thickness >= 500 ? 800 : 1000), Hp = p.hProt || p.H;
+      m.rule(Hp >= hMin, 'Hauteur de protection', f0(Hp) + ' mm ≥ ' + hMin + (rampant ? ' (rampant)' : ''), f0(Hp) + ' mm < ' + hMin + ' mm', N.GC);
       m.rule(st.maxGap <= 110.0001, 'Gabarit T1 (Ø 110)', 'vide ' + f1(st.maxGap) + ' mm ≤ 110', 'vide ' + f1(st.maxGap) + ' mm > 110 mm', N.GC);
       m.rule(st.bottomGap <= 110, 'Vide en partie basse', f0(st.bottomGap) + ' mm ≤ 110', f0(st.bottomGap) + ' mm > 110 mm', N.GC);
       if (st.horizLowest != null && st.horizLowest <= 600)
@@ -648,13 +785,14 @@
       { k: 'H', l: 'Hauteur (dessus main courante)', t: 'num', d: defH || 1000, u: 'mm', g: 'Dimensions' },
       { k: 'thickness', l: 'Épaisseur du dispositif (≥ 500 → 800 mm admis)', t: 'num', d: 0, u: 'mm', g: 'Dimensions' },
       { k: 'emax', l: 'Entraxe maxi des poteaux', t: 'num', d: 1500, u: 'mm', g: 'Poteaux' },
-      { k: 'post', l: 'Profil poteau', t: 'prof', d: 'TC40x40x4', list: 'poteau', g: 'Poteaux' },
-      { k: 'pose', l: 'Pose', t: 'sel', d: 'francaise', o: [['francaise', 'À la française (platine sur dalle)'], ['anglaise', 'À l\'anglaise (platine en nez de dalle)'], ['deport', 'À l\'anglaise avec déport'], ['scellement', 'Scellement chimique / béton']], g: 'Fixation' },
+      { k: 'post', l: 'Profil poteau', t: 'prof', d: '__auto', auto: 'poteau', list: 'poteau', g: 'Poteaux' },
+      { k: 'pose', l: 'Pose', t: 'sel', d: 'francaise', o: [['francaise', 'À la française (platine sur dalle)'], ['anglaise', 'À l\'anglaise (platine en nez de dalle)'], ['deport', 'À l\'anglaise avec déport'], ['sabot', 'Sabot / patte en applique'],
+        ['scellement', 'Scellement chimique / béton'], ['encastre', 'Encastré dans réservation']], g: 'Fixation' },
       { k: 'drop', l: 'Descente / scellement', t: 'num', d: 200, u: 'mm', g: 'Fixation', show: ['pose', 'anglaise', 'deport', 'scellement'] },
       { k: 'plateL', l: 'Platine longueur', t: 'num', d: 100, u: 'mm', g: 'Fixation', show: ['pose', 'francaise', 'anglaise', 'deport'] },
       { k: 'plateW', l: 'Platine largeur', t: 'num', d: 100, u: 'mm', g: 'Fixation', show: ['pose', 'francaise', 'anglaise', 'deport'] },
       { k: 'plateT', l: 'Platine épaisseur', t: 'num', d: 8, u: 'mm', g: 'Fixation', show: ['pose', 'francaise', 'anglaise', 'deport'] },
-      { k: 'mc', l: 'Profil main courante', t: 'prof', d: 'TR40x20x2', list: 'mainCourante', g: 'Main courante' },
+      { k: 'mc', l: 'Profil main courante', t: 'prof', d: 'TR40x20x2', auto: 'main courante', list: 'mainCourante', g: 'Main courante' },
       { k: 'mcPos', l: 'Position', t: 'sel', d: 'dessus', o: [['dessus', 'Filante sur poteaux'], ['entre', 'Entre poteaux']], g: 'Main courante' },
       { k: 'lb', l: 'Lisse basse', t: 'bool', d: true, g: 'Lisse basse' },
       { k: 'lbProf', l: 'Profil lisse basse', t: 'prof', d: 'TR40x20x2', list: 'lisse', g: 'Lisse basse', show: ['lb', true] },
@@ -681,16 +819,58 @@
       { k: 'L3', l: 'Longueur 3', t: 'num', d: 1500, u: 'mm', g: 'Implantation', show: ['trace', 'U'] },
       { k: 'turn', l: 'Sens du retour', t: 'sel', d: 'gauche', o: [['gauche', 'Gauche'], ['droite', 'Droite']], g: 'Implantation', show: ['trace', 'L', 'U'] },
       { k: 'slope', l: 'Pente du rampant', t: 'num', d: 33, u: '°', g: 'Implantation', show: ['trace', 'rampant'] }
-    ].concat(railParams(1000)),
+    ].concat(railParams(1000), masonParams({ mat: 'beton', floor: 'carrelage', extra: [
+      { k: 'support', l: 'Support maçonné', t: 'sel', d: 'dalle', o: [['dalle', 'Dalle / plancher'], ['balcon', 'Balcon + façade'], ['muret', 'Muret / allège'], ['acrotere', 'Toiture-terrasse + acrotère'], ['escalier', 'Escalier béton (rampant)'], ['aucun', 'Aucun']], g: 'Maçonnerie & contexte' },
+      { k: 'slabT', l: 'Épaisseur de dalle', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'dalle', 'balcon', 'muret', 'acrotere'] },
+      { k: 'slabD', l: 'Profondeur de dalle (côté intérieur)', t: 'num', d: 1500, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'dalle', 'balcon', 'muret', 'acrotere'] },
+      { k: 'nez', l: 'Recul des poteaux / nez de dalle', t: 'num', d: 100, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'dalle', 'balcon'] },
+      { k: 'muretH', l: 'Hauteur muret / acrotère', t: 'num', d: 600, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'muret', 'acrotere'] },
+      { k: 'muretT', l: 'Épaisseur muret / acrotère', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'muret', 'acrotere'] },
+      { k: 'facadeH', l: 'Hauteur de façade', t: 'num', d: 2700, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'balcon'] },
+      { k: 'stepH', l: 'Hauteur de marche béton', t: 'num', d: 175, u: 'mm', g: 'Maçonnerie & contexte', show: ['support', 'escalier'] }
+    ] })),
     build: function (p) {
       var m = new Model('Garde-corps ' + p.trace + ' H' + p.H), sg = p.turn === 'droite' ? 1 : -1, pts, gy;
       if (p.trace === 'L') pts = [[0, 0], [p.L1, 0], [p.L1, sg * p.L2]];
       else if (p.trace === 'U') pts = [[0, 0], [p.L1, 0], [p.L1, sg * p.L2], [p.L1 - p.L3, sg * p.L2]];
       else pts = [[0, 0], [p.L1, 0]];
-      gy = pts.map(function (q) { return p.trace === 'rampant' ? q[0] * Math.tan(p.slope * DEG) : 0; });
-      var st = railRun(m, pts, gy, railOpts(p));
+      var raised = p.support === 'muret' || p.support === 'acrotere', base = raised ? p.muretH : 0;
+      gy = pts.map(function (q) { return (p.trace === 'rampant' ? q[0] * Math.tan(p.slope * DEG) : 0) + base; });
+      var side = (p.trace === 'L' || p.trace === 'U') && p.turn === 'droite' ? -1 : 1, ro = railOpts(p); ro.side = side;
+      var st = railRun(m, pts, gy, ro);
+      // maçonnerie : le vide est du côté +side·n, l'intérieur du côté opposé
+      var ang = p.pose === 'anglaise' || p.pose === 'deport' || p.pose === 'sabot', edge = raised ? p.muretT / 2 : ang ? 0 : p.nez;
+      if (p.support !== 'aucun' && p.support !== 'escalier') {
+        // dalle : polygone fermé = tracé décalé côté vide (nez) + côté(s) de fermeture vers le bâtiment
+        var o = offsetPoly(pts, side * edge), poly, close;
+        if (pts.length === 2) { var d0 = pnorm(psub(pts[1], pts[0])), nn = [-d0[1], d0[0]], back = pmul(nn, -side * p.slabD);
+          poly = [o[0], o[1], padd(o[1], back), padd(o[0], back)]; close = [[poly[2], poly[3]]]; }
+        else if (pts.length === 3) { var cr = [o[0][0], o[2][1]]; poly = [o[0], o[1], o[2], cr]; close = [[o[2], cr], [cr, o[0]]]; }
+        else { var c2 = [o[0][0], o[3][1]]; poly = [o[0], o[1], o[2], o[3], c2]; close = [[c2, o[0]]]; }
+        m.mason('Dalle', 'beton', poly, -p.slabT, p.slabT - 20);
+        m.mason('Revêtement', p.floorMat, poly, -20, 20);
+        if (p.support === 'balcon') {
+          close.forEach(function (cl, ci) {
+            var Lc = pdist(cl[0], cl[1]);
+            mWall(m, 'Façade', p.masonMat, cl[0], cl[1], 0, side * 220, -20, p.facadeH + 20, ci === 0 && Lc > 1600 ? [{ s0: Lc / 2 - 700, s1: Lc / 2 + 700, y0: -20, y1: 2150 }] : []);
+          });
+          m.info('Façade', 'Porte-fenêtre 1400 x 2150 représentée pour l\'implantation.');
+        }
+      }
+      if (raised) for (var i = 0; i + 1 < pts.length; i++) mStrip(m, p.support === 'muret' ? 'Muret' : 'Acrotère', p.masonMat, pts[i], pts[i + 1], side * edge, side * (edge - p.muretT), 0, p.muretH, i === 0 ? 0 : p.muretT / 2);
+      if (p.support === 'escalier' && p.trace === 'rampant') {
+        var tg = Math.tan(p.slope * DEG), hh = p.stepH, gg = hh / tg, nS = Math.floor(p.L1 / gg);
+        for (var k = 0; k < nS; k++) mBox(m, 'Marche béton', p.masonMat, (k + 1) * gg - gg, 60 * side, (k + 1) * gg, -1100 * side, 0, (k + 1) * hh - (k === nS - 1 ? 0 : 0));
+        m.value('Escalier béton', nS + ' marches de ' + f0(hh) + ' x ' + f0(gg) + ' mm');
+      }
+      masonValue(m);
       m.value('Longueur développée', f0(st.length) + ' mm'); m.value('Poteaux', st.posts); m.value('Entraxe', f0(st.spacing) + ' mm');
       m.value('Vide maxi', f1(st.maxGap) + ' mm'); m.value('Remplissage', st.infill[0] || '');
+      if (raised) {
+        p.hProt = p.muretH >= 600 ? p.muretH + p.H : p.H; p.thickness = Math.max(p.thickness, p.muretT);
+        m.info('Muret / acrotère', p.muretH >= 600 ? 'Arase à ' + f0(p.muretH) + ' mm : hauteur de protection comptée depuis le sol fini (muret + garde-corps).'
+                                                : 'Arase à moins de 600 mm : point d\'appui ; hauteur de protection comptée depuis l\'arase (interprétation à confirmer).', N.GC);
+      }
       railChecks(m, p, st, p.trace === 'rampant');
       return m;
     }
@@ -710,44 +890,69 @@
       { k: 'drop', l: 'Scellement', t: 'num', d: 500, u: 'mm', g: 'Poteaux' },
       { k: 'railP', l: 'Lisses haute et basse', t: 'prof', d: 'TR40x20x2', list: 'lisse', g: 'Cadre' },
       { k: 'over', l: 'Dépassement des barreaux (pointes)', t: 'num', d: 0, u: 'mm', g: 'Remplissage' }
-    ].concat(infillParams('Remplissage', 'barreaux')),
+    ].concat(infillParams('Remplissage', 'barreaux'), masonParams({ mat: 'parpaing-enduit', floor: 'gazon', extra: [
+      { k: 'wallBase', l: 'Soubassement', t: 'sel', d: 'muret', o: [['aucun', 'Aucun (poteaux scellés au sol)'], ['muret', 'Muret de soubassement']], g: 'Maçonnerie & contexte' },
+      { k: 'muretH', l: 'Hauteur du muret', t: 'num', d: 600, u: 'mm', g: 'Maçonnerie & contexte', show: ['wallBase', 'muret'] },
+      { k: 'muretT', l: 'Épaisseur du muret', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['wallBase', 'muret'] },
+      { k: 'cap', l: 'Chaperon béton', t: 'bool', d: true, g: 'Maçonnerie & contexte', show: ['wallBase', 'muret'] },
+      { k: 'postMode', l: 'Poteaux', t: 'sel', d: 'acier', o: [['acier', 'Poteaux acier'], ['piliers', 'Piliers maçonnés']], g: 'Maçonnerie & contexte' },
+      { k: 'pillar', l: 'Section des piliers', t: 'num', d: 300, u: 'mm', g: 'Maçonnerie & contexte', show: ['postMode', 'piliers'] }
+    ] })),
     build: function (p) {
       var m = new Model('Clôture L' + p.L + ' H' + p.H), post = profile(p.post), rl = profile(p.railP), n = Math.max(1, Math.ceil(p.L / p.emax - 1e-9)), e = p.L / n;
-      var slope = p.slopePct / 100, f = segFrame([0, 0], [p.L, 0]);
-      var gAt = function (x) { return x * slope; };
+      var slope = p.slopePct / 100, f = segFrame([0, 0], [p.L, 0]), mur = p.wallBase === 'muret', capH = mur && p.cap ? 60 : 0, pil = p.postMode === 'piliers';
+      var gAt = function (x) { return x * slope; }, half = pil ? p.pillar / 2 : post.vw / 2;
+      var spanBase = function (k) { return p.stepMode === 'redans' || mur ? Math.max(gAt(k * e), gAt((k + 1) * e)) : null; };
+      var lift = mur ? p.muretH + capH : 0;
       for (var k = 0; k <= n; k++) {
-        var x = k * e, gL = p.stepMode === 'redans' ? Math.max(gAt(Math.max(0, x - e)), gAt(x)) : gAt(x);
-        var top = (p.stepMode === 'redans' ? gAt(Math.min(p.L, x)) + Math.max(0, slope) * e : gAt(x)) + p.jeu + p.H + p.postOver;
-        m.member('P', 'Poteau', post.id, f.at(x, gAt(x) - p.drop, 0), f.at(x, top, 0));
+        var x = k * e, b0 = Math.max(k > 0 ? (spanBase(k - 1) != null ? spanBase(k - 1) : gAt(x)) : gAt(x), k < n ? (spanBase(k) != null ? spanBase(k) : gAt(x)) : gAt(x));
+        var top = b0 + lift + p.jeu + p.H + p.postOver;
+        if (pil) {
+          mBox(m, 'Pilier maçonné', p.masonMat, x - half, -half, x + half, half, gAt(x) - 100, top - gAt(x) + 100);
+          mBox(m, 'Chapeau de pilier', 'beton', x - half - 30, -half - 30, x + half + 30, half + 30, top, 60);
+        } else m.member('P', 'Poteau', post.id, f.at(x, (mur ? b0 + capH : gAt(x)) - p.drop, 0), f.at(x, top, 0));
       }
       var st = { gaps: [] };
       for (k = 0; k < n; k++) {
-        var sa = k * e + post.vw / 2, sb = (k + 1) * e - post.vw / 2, base = p.stepMode === 'redans' ? Math.max(gAt(k * e), gAt((k + 1) * e)) : null;
-        var g = function (s) { return base != null ? base : gAt(s); };
+        var sa = k * e + half, sb = (k + 1) * e - half, base = spanBase(k);
+        var g = function (s) { return (base != null ? base : gAt(s)) + lift; };
         var yb = function (s) { return g(s) + p.jeu + rl.sh / 2; }, yt = function (s) { return g(s) + p.jeu + p.H - rl.sh / 2; };
         m.member('LB', 'Lisse basse', rl.id, f.at(sa, yb(sa), 0), f.at(sb, yb(sb), 0));
         m.member('LH', 'Lisse haute', rl.id, f.at(sa, yt(sa), 0), f.at(sb, yt(sb), 0));
         var pn = { f: f, s0: sa, s1: sb, w: 0, ground: g, bot: function (s) { return yb(s) + rl.sh / 2; }, top: function (s) { return yt(s) - rl.sh / 2; } };
         var sp = infillSpec(p); if (p.over > 0 && sp.type === 'barreaux') { sp.over = p.over + rl.sh; }
         st.gaps.push(infill(m, pn, sp).gap);
+        // maçonnerie de la travée : muret (redans), chaperon, sol
+        var gl = Math.min(gAt(k * e), gAt((k + 1) * e));
+        if (mur) {
+          mBox(m, 'Muret', p.masonMat, k * e, -p.muretT / 2, (k + 1) * e, p.muretT / 2, gl - 100, base - gl + p.muretH + 100);
+          if (p.cap) mBox(m, 'Chaperon', 'beton', k * e, -p.muretT / 2 - 30, (k + 1) * e, p.muretT / 2 + 30, base + p.muretH, capH);
+        }
+        mBox(m, 'Sol', p.floorMat, k * e, -1500, (k + 1) * e, 1500, gl - 120, 120);
       }
       var gmax = Math.max.apply(null, st.gaps);
       m.value('Panneaux', n); m.value('Entraxe', f0(e) + ' mm'); m.value('Vide maxi', f1(gmax) + ' mm');
+      if (mur) m.value('Muret', f0(p.muretH) + ' x ' + f0(p.muretT) + ' mm (' + f0(p.L * p.muretH / 1e6 / (0.5 * 0.2)) + ' blocs 20x50 env.)');
+      masonValue(m);
       m.info('Statut', 'Clôture : pas d\'exigence NF P01-012, sauf si elle protège d\'une chute (> 1 m) — utiliser alors « Garde-corps ».', N.GC);
       if (gmax > 110) m.warn('Vides', f0(gmax) + ' mm > 110 : passage possible d\'un enfant / animal'); else m.ok('Vides', f0(gmax) + ' mm ≤ 110');
-      if (p.drop < p.H / 3) m.warn('Scellement', f0(p.drop) + ' mm : usuellement ≥ H/3 pour la reprise du vent'); else m.ok('Scellement', f0(p.drop) + ' mm ≥ H/3');
+      if (!pil) { if (p.drop < p.H / 3) m.warn('Scellement', f0(p.drop) + ' mm : usuellement ≥ H/3 pour la reprise du vent'); else m.ok('Scellement', f0(p.drop) + ' mm ≥ H/3'); }
+      else m.info('Piliers maçonnés', 'Panneaux fixés par pattes à sceller ou chevilles chimiques dans les piliers (chaînage armé recommandé).');
       return m;
     }
   });
 
   // ------------------------------------------------------------------ portails
-  var TOPS = [['droit', 'Droit'], ['cintre', 'Cintré (bombé)'], ['gendarme', 'Chapeau de gendarme'], ['concave', 'Concave (en creux)'], ['biais', 'En biais']];
+  var TOPS = [['droit', 'Droit'], ['cintre', 'Cintré (bombé)'], ['double-cintre', 'Double cintre (un arc par vantail)'], ['gendarme', 'Chapeau de gendarme'], ['gendarme-inverse', 'Chapeau de gendarme inversé'], ['concave', 'Concave (en creux)'], ['pointe', 'En pointe (fronton)'], ['biais', 'En biais']];
   function topShape(kind, W, H, f) {
     return function (s) {
       var u = clamp(s / W, 0, 1);
       switch (kind) {
         case 'cintre': { var R = (W * W / 4 + f * f) / (2 * f || 1), dx = s - W / 2; return f > 0 ? H + f - (R - Math.sqrt(Math.max(R * R - dx * dx, 0))) : H; }
         case 'gendarme': return H + f * (1 - Math.cos(2 * Math.PI * u)) / 2;
+        case 'gendarme-inverse': return H + f - f * (1 - Math.cos(2 * Math.PI * u)) / 2;
+        case 'pointe': return H + f * (1 - Math.abs(2 * u - 1));
+        case 'double-cintre': { var Wh = W / 2, sx = s < Wh ? s : s - Wh, R3 = (Wh * Wh / 4 + f * f) / (2 * f || 1), d3 = sx - Wh / 2; return f > 0 ? H + f - (R3 - Math.sqrt(Math.max(R3 * R3 - d3 * d3, 0))) : H; }
         case 'concave': { var R2 = (W * W / 4 + f * f) / (2 * f || 1), d2 = s - W / 2; return f > 0 ? H + (R2 - Math.sqrt(Math.max(R2 * R2 - d2 * d2, 0))) : H; }
         case 'biais': return H + f * u;
         default: return H;
@@ -765,19 +970,25 @@
       { k: 'meet', l: 'Jeu entre vantaux', t: 'num', d: 10, u: 'mm', g: 'Ouverture', show: ['type', 'battant2'] },
       { k: 'tail', l: 'Queue autoportant (% passage)', t: 'num', d: 45, u: '%', g: 'Ouverture', show: ['type', 'autoportant'] },
       { k: 'top', l: 'Forme du haut', t: 'sel', d: 'droit', o: TOPS, g: 'Forme' },
-      { k: 'rise', l: 'Flèche / surélévation', t: 'num', d: 250, u: 'mm', g: 'Forme', show: ['top', 'cintre', 'gendarme', 'concave', 'biais'] },
+      { k: 'rise', l: 'Flèche / surélévation', t: 'num', d: 250, u: 'mm', g: 'Forme', show: ['top', 'cintre', 'double-cintre', 'gendarme', 'gendarme-inverse', 'concave', 'pointe', 'biais'] },
       { k: 'frame', l: 'Profil cadre', t: 'prof', d: 'TR60x40x2', list: 'cadre', g: 'Cadre' },
       { k: 'rails', l: 'Traverses intermédiaires', t: 'num', d: 1, g: 'Cadre' },
       { k: 'railP', l: 'Profil traverse', t: 'prof', d: 'TR40x20x2', list: 'lisse', g: 'Cadre' },
       { k: 'brace', l: 'Écharpe (diagonale)', t: 'bool', d: false, g: 'Cadre' },
       { k: 'over', l: 'Dépassement barreaux (pointes)', t: 'num', d: 0, u: 'mm', g: 'Remplissage' }
     ].concat(infillParams('Remplissage', 'barreaux'), [
-      { k: 'posts', l: 'Piliers acier', t: 'bool', d: true, g: 'Piliers' },
-      { k: 'postP', l: 'Profil pilier', t: 'prof', d: 'TC100x100x4', list: 'pilier', g: 'Piliers', show: ['posts', true] },
-      { k: 'embed', l: 'Scellement pilier', t: 'num', d: 500, u: 'mm', g: 'Piliers', show: ['posts', true] },
+      { k: 'pillars', l: 'Piliers', t: 'sel', d: 'maconnes', o: [['maconnes', 'Piliers maçonnés'], ['acier', 'Piliers acier'], ['aucun', 'Aucun (fixation sur existant)']], g: 'Piliers' },
+      { k: 'postP', l: 'Profil pilier', t: 'prof', d: 'TC100x100x4', list: 'pilier', g: 'Piliers', show: ['pillars', 'acier'] },
+      { k: 'embed', l: 'Scellement pilier', t: 'num', d: 500, u: 'mm', g: 'Piliers', show: ['pillars', 'acier'] },
+      { k: 'pillarSize', l: 'Section des piliers maçonnés', t: 'num', d: 400, u: 'mm', g: 'Piliers', show: ['pillars', 'maconnes'] },
+      { k: 'pillarCap', l: 'Chapeaux de piliers', t: 'bool', d: true, g: 'Piliers', show: ['pillars', 'maconnes'] },
       { k: 'motor', l: 'Motorisé', t: 'bool', d: false, g: 'Quincaillerie & sécurité' },
       { k: 'lock', l: 'Serrure', t: 'bool', d: true, g: 'Quincaillerie & sécurité' }
-    ]),
+    ], masonParams({ mat: 'parpaing-enduit', floor: 'pave', extra: [
+      { k: 'wingL', l: 'Murs de clôture latéraux (longueur, 0 = aucun)', t: 'num', d: 2000, u: 'mm', g: 'Maçonnerie & contexte' },
+      { k: 'wingH', l: 'Hauteur des murs latéraux', t: 'num', d: 1200, u: 'mm', g: 'Maçonnerie & contexte' },
+      { k: 'wingT', l: 'Épaisseur des murs', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte' }
+    ] })),
     build: function (p) {
       var TYPES = { battant2: 'Portail battant 2 vantaux', battant1: 'Portail battant', portillon: 'Portillon', coulissant: 'Portail coulissant', autoportant: 'Portail autoportant' };
       var m = new Model(TYPES[p.type] + ' ' + p.W + 'x' + p.H + (p.top !== 'droit' ? ' — ' + TOPS.filter(function (t) { return t[0] === p.top; })[0][1].toLowerCase() : ''));
@@ -838,7 +1049,24 @@
         [leaves[0].x0 + 200, leaves[0].x0 + tailL - 200].forEach(function (x) { m.plate('CH', 'Chariot à galets', 'XY', [[x - 150, -40], [x + 150, -40], [x + 150, y0 - 90], [x - 150, y0 - 90]], 120, -80, 120); });
         m.rule(p.tail >= 40, 'Queue autoportant', f0(p.tail) + ' % du passage', f0(p.tail) + ' % < 40 % : basculement possible', 'règle de l\'art', true);
       }
-      if (p.posts) {
+      var topY = y0 + p.H + Math.max(0, p.rise) + 100, ps = p.pillarSize, zw = slide ? -(fr.wa / 2 + Math.max(ps, p.wingT) / 2 + 30) : 0;
+      if (p.pillars === 'maconnes') {
+        [[-ps, 0], [p.W, p.W + ps]].forEach(function (xx) {
+          mBox(m, 'Pilier maçonné', p.masonMat, xx[0], zw - ps / 2, xx[1], zw + ps / 2, -100, topY + 100);
+          if (p.pillarCap) mBox(m, 'Chapeau de pilier', 'beton', xx[0] - 30, zw - ps / 2 - 30, xx[1] + 30, zw + ps / 2 + 30, topY, 70);
+        });
+        m.info('Piliers maçonnés', 'Gonds à sceller ou platines chevillées (chevilles chimiques) ; pilier en blocs à bancher armés conseillé pour un portail de plus de 100 kg.');
+      }
+      if (p.wingL > 0) {
+        var wx = p.pillars === 'maconnes' ? ps : 0, wz = slide ? zw : 0;
+        mBox(m, 'Mur de clôture', p.masonMat, -wx - p.wingL, wz - p.wingT / 2, -wx, wz + p.wingT / 2, -100, p.wingH + 100);
+        mBox(m, 'Mur de clôture', p.masonMat, p.W + wx, wz - p.wingT / 2, p.W + wx + p.wingL, wz + p.wingT / 2, -100, p.wingH + 100);
+        [[-wx - p.wingL, -wx], [p.W + wx, p.W + wx + p.wingL]].forEach(function (xx) { mBox(m, 'Chaperon', 'beton', xx[0], wz - p.wingT / 2 - 30, xx[1], wz + p.wingT / 2 + 30, p.wingH, 50); });
+      }
+      var ext = (p.pillars === 'maconnes' ? ps : 0) + Math.max(p.wingL, 500);
+      mBox(m, 'Allée / sol', p.floorMat, -ext, -3000, p.W + ext, 3000, -120, 120);
+      masonValue(m);
+      if (p.pillars === 'acier') {
         var pp = profile(p.postP), zp = slide ? -(fr.wa / 2 + pp.wa / 2 + 30) : 0;
         [-pp.vw / 2, p.W + pp.vw / 2].forEach(function (x) { m.member('PIL', 'Pilier', pp.id, f.at(x, -p.embed, zp), f.at(x, y0 + p.H + Math.max(0, p.rise) + 100, zp)); });
       }
@@ -952,9 +1180,9 @@
     if (rails === 0) m.warn('Garde-corps', 'Aucun : obligatoire côté vide (rampant ≥ 900 mm).', N.GC);
   }
 
-  var TREADS = [['larmee', 'Tôle larmée'], ['pliee', 'Tôle pliée (plis avant / arrière)'], ['caillebotis', 'Caillebotis'], ['bois', 'Bois massif'], ['beton', 'Cassette tôle + béton']];
+  var TREADS = [['larmee', 'Tôle larmée'], ['pliee', 'Tôle pliée (plis avant / arrière)'], ['perforee', 'Tôle perforée pliée'], ['caillebotis', 'Caillebotis'], ['caillebotis-presse', 'Caillebotis pressé (maille fine)'], ['bois', 'Bois massif'], ['bois-acier', 'Bois sur cassette acier'], ['beton', 'Cassette tôle + béton'], ['pierre', 'Pierre / béton préfabriqué'], ['verre', 'Verre feuilleté']];
   function treadMaterial(type) {
-    return { larmee: ['acier', 6], pliee: ['acier', 4], caillebotis: ['grillage', 30], bois: ['bois', 40], beton: ['beton', 50] }[type] || ['acier', 6];
+    return { larmee: ['acier', 6], pliee: ['acier', 4], perforee: ['acier', 4], caillebotis: ['grillage', 30], 'caillebotis-presse': ['grillage', 30], bois: ['bois', 40], 'bois-acier': ['bois', 30], beton: ['beton', 50], pierre: ['beton', 40], verre: ['verre', 25.5] }[type] || ['acier', 6];
   }
   function stairCommonParams(kindParams) {
     return [
@@ -965,11 +1193,11 @@
     ].concat(kindParams, [
       { k: 'tread', l: 'Type de marche', t: 'sel', d: 'pliee', o: TREADS, g: 'Marches' },
       { k: 'tt', l: 'Épaisseur (0 = selon type)', t: 'num', d: 0, u: 'mm', g: 'Marches' },
-      { k: 'fold', l: 'Hauteur des plis', t: 'num', d: 40, u: 'mm', g: 'Marches', show: ['tread', 'pliee', 'beton'] },
+      { k: 'fold', l: 'Hauteur des plis', t: 'num', d: 40, u: 'mm', g: 'Marches', show: ['tread', 'pliee', 'beton', 'perforee'] },
       { k: 'nosing', l: 'Recouvrement (nez)', t: 'num', d: 30, u: 'mm', g: 'Marches' },
       { k: 'stringer', l: 'Structure', t: 'sel', d: 'lateraux', o: [['lateraux', '2 limons latéraux'], ['central', 'Limon central + consoles'], ['cremaillere', 'Crémaillères (droit)'], ['exterieur', 'Limon extérieur seul (mur côté intérieur)']], g: 'Limons' },
-      { k: 'sp', l: 'Profil limon', t: 'prof', d: 'PL250x12', list: 'limon', g: 'Limons' },
-      { k: 'spc', l: 'Profil limon central', t: 'prof', d: 'TR150x100x5', list: 'limonCentral', g: 'Limons', show: ['stringer', 'central'] },
+      { k: 'sp', l: 'Profil limon', t: 'prof', d: '__auto', auto: 'limon', list: 'limon', g: 'Limons' },
+      { k: 'spc', l: 'Profil limon central', t: 'prof', d: '__auto', auto: 'limon', list: 'limonCentral', g: 'Limons', show: ['stringer', 'central'] },
       { k: 'dTop', l: 'Débord limon au-dessus du nez', t: 'num', d: 40, u: 'mm', g: 'Limons' },
       { k: 'landingFrame', l: 'Cadre de palier', t: 'prof', d: 'UPN120', list: 'poutre', g: 'Limons' },
       { k: 'rails', l: 'Garde-corps rampant', t: 'sel', d: 'ext', o: [['ext', 'Côté extérieur'], ['int', 'Côté intérieur'], ['both', 'Deux côtés'], ['none', 'Aucun']], g: 'Garde-corps' },
@@ -979,9 +1207,73 @@
       { k: 'emax', l: 'Entraxe maxi poteaux', t: 'num', d: 1200, u: 'mm', g: 'Garde-corps' }
     ], infillParams('Garde-corps', 'barreaux').filter(function (x) { return x.k !== 'infill'; }).map(function (x) { return x; }), [
       { k: 'infill', l: 'Remplissage du rampant', t: 'sel', d: 'barreaux', o: INFILLS.filter(function (x) { return ['barreaux', 'lisses', 'cables', 'verre', 'tole', 'perforee', 'aucun', 'industriel'].indexOf(x[0]) >= 0; }), g: 'Garde-corps' },
+      { k: 'mcMural', l: 'Main courante murale', t: 'sel', d: 'aucun', o: [['aucun', 'Aucune'], ['ext', 'Côté extérieur'], ['int', 'Côté intérieur'], ['both', 'Deux côtés']], g: 'Garde-corps' },
+      { k: 'mcMuralP', l: 'Profil main courante murale', t: 'prof', d: 'TRD42.4x2', list: 'mainCourante', g: 'Garde-corps', show: ['mcMural', 'ext', 'int', 'both'] },
       { k: 'qk', l: 'Charge d\'exploitation (0 = selon usage)', t: 'num', d: 0, u: 'kN/m²', step: 0.5, g: 'Résistance' },
       { k: 'grade', l: 'Nuance', t: 'sel', d: 'S235', o: GRADES, g: 'Résistance' }
-    ]);
+    ], masonParams({ mat: 'enduit-blanc', floor: 'carrelage', extra: [
+      { k: 'floorLow', l: 'Dalle basse (sol fini)', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'upper', l: 'Plancher haut avec trémie', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'slabT', l: 'Épaisseur du plancher haut', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['upper', true] },
+      { k: 'walls', l: 'Murs d\'échiffre', t: 'sel', d: 'aucun', o: [['aucun', 'Aucun'], ['ext', 'Côté extérieur'], ['int', 'Côté intérieur'], ['both', 'Deux côtés (cage)']], g: 'Maçonnerie & contexte' },
+      { k: 'wallT', l: 'Épaisseur des murs', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['walls', 'ext', 'int', 'both'] }
+    ] }));
+  }
+
+  function polyPt(P, t) { if (t >= 0) return polyAt(P, t); return padd(P[0], pmul(pnorm(psub(P[1], P[0])), t)); }
+  function clipY0(poly) { // Sutherland–Hodgman : conserve y ≥ 0 (coupe d'aplomb au sol)
+    var out = [];
+    for (var i = 0; i < poly.length; i++) {
+      var a = poly[i], b = poly[(i + 1) % poly.length], ina = a[1] >= -1e-9, inb = b[1] >= -1e-9;
+      if (ina) out.push(a);
+      if (ina !== inb) { var k = a[1] / (a[1] - b[1]); out.push([a[0] + (b[0] - a[0]) * k, 0]); }
+    }
+    return out;
+  }
+  /**
+   * ATOME « limon tôle » : contour exact par tronçon droit du bord (coupe au sol, coupe verticale au chevêtre,
+   * ressaut aux paliers), modélisé en tôle et livré en développé avec traçage des marches.
+   */
+  function stringerPlates(m, p, band, L, nT, h, landIdx, inner, sp, tv) {
+    var P = inner ? band.inner : band.outer, ts = L.map(function (l) { return (inner ? l.I : l.O).t; }), T = sp.T, D = sp.sh;
+    var nose = [[ts[0] - (ts[1] - ts[0]), 0]];
+    for (var k = 0; k <= nT; k++) {
+      nose.push([ts[k], (k + 1) * h]);
+      if (landIdx[k] && k + 2 <= nT) { var gN = ts[k + 2] - ts[k + 1], tf = ts[k + 1] - gN; if (tf > ts[k] + 1) nose.push([tf, (k + 1) * h]); }
+    }
+    function seg(t) { for (var i = 0; i + 1 < nose.length; i++) if (t <= nose[i + 1][0] + 1e-9) return i; return nose.length - 2; }
+    function yN(t) { var i = seg(t), a = nose[i], b = nose[i + 1], d = b[0] - a[0]; return d > 1e-9 ? a[1] + (b[1] - a[1]) * (t - a[0]) / d : b[1]; }
+    function slope(t) { var i = seg(t), a = nose[i], b = nose[i + 1], d = b[0] - a[0]; return d > 1e-9 ? (b[1] - a[1]) / d : 0; }
+    var top = function (t) { return yN(t) + p.dTop; }, bot = function (t, s2) { return top(t) - D * Math.sqrt(1 + s2 * s2); };
+    var cum = [0]; for (var i = 1; i < P.length; i++) cum.push(cum[i - 1] + pdist(P[i - 1], P[i]));
+    var tS = nose[0][0], tE = ts[nT], name = inner ? 'intérieur' : 'extérieur', pieces = [];
+    for (i = 0; i + 1 < P.length; i++) {
+      var a = i === 0 ? Math.min(tS, 0) : cum[i], b = cum[i + 1]; a = Math.max(a, tS); b = Math.min(b, tE); if (b - a < 1) continue;
+      pieces.push({ i: i, a: a, b: b });
+    }
+    pieces.forEach(function (pc, pi) {
+      var d = pnorm(psub(P[pc.i + 1], P[pc.i])), n = [-d[1], d[0]], out = inner ? n : pmul(n, -1);
+      var plane = Math.abs(d[1]) < 1e-9 ? 'XY' : Math.abs(d[0]) < 1e-9 ? 'YZ' : null; if (!plane) return;
+      var bps = [pc.a, pc.b].concat(nose.map(function (q) { return q[0]; }).filter(function (t) { return t > pc.a + 1e-6 && t < pc.b - 1e-6; })).sort(function (x, y) { return x - y; });
+      var lower = bps.map(function (t, j) { var s1 = slope(Math.max(pc.a, t - 1)), s2 = slope(Math.min(pc.b, t + 1)); return [t, Math.min(bot(t, s1), bot(t, s2))]; });
+      var poly = clipY0(lower.concat(bps.slice().reverse().map(function (t) { return [t, top(t)]; })));
+      if (poly.length < 3) return;
+      var U = function (t) { var q = polyPt(P, t); return plane === 'XY' ? q[0] : q[1]; };
+      var off = plane === 'XY' ? P[pc.i][1] + out[1] * T / 2 : P[pc.i][0] + out[0] * T / 2;
+      m.plate('LIM', 'Limon tôle', plane, poly.map(function (q) { return [U(q[0]), q[1]]; }), T, off, T);
+      var sL = function (t) { return t - pc.a; }, lines = [], table = [];
+      for (var k2 = 0; k2 < nT; k2++) {
+        if (ts[k2] < pc.a - 1e-6 || ts[k2] >= pc.b - 1e-6) continue;
+        var y = (k2 + 1) * h, x0 = sL(ts[k2]) - (landIdx[k2] ? 0 : p.nosing), x1 = sL(Math.min(ts[k2 + 1], pc.b));
+        lines.push({ a: [x0, y], b: [x1, y], layer: 'TRACAGE', label: landIdx[k2] ? 'Palier' : 'M' + (k2 + 1) });
+        lines.push({ a: [x0, y - tv], b: [x1, y - tv], layer: 'TRACAGE' });
+        table.push([landIdx[k2] ? 'Palier' : 'M' + (k2 + 1), round(x0, 1), round(y, 1), round(x1 - x0, 1)]);
+      }
+      var xs = poly.map(function (q) { return sL(q[0]); }), dev = Math.max.apply(null, xs) - Math.min.apply(null, xs);
+      m.flat({ name: 'Limon ' + name + (pieces.length > 1 ? ' — tronçon ' + (pi + 1) + '/' + pieces.length : '') + ' · ' + sp.label + ' (débit ' + f0(dev) + ' mm)',
+               outline: poly.map(function (q) { return [sL(q[0]), q[1]]; }), lines: lines, table: table, cols: ['Marche', 'Nez à (mm)', 'Dessus à (mm)', 'Profondeur'],
+               texts: [{ at: [0, -40], text: 'Niveau 0 = sol fini ; traits = dessus et dessous de marche' }] });
+    });
   }
 
   /**
@@ -1052,7 +1344,7 @@
       var th = isL ? Math.max(tt, 6) : tt;
       m.plate(isL ? 'PA' : 'M', isL ? 'Palier' : 'Marche', 'XZ', poly, th, top - th / 2, th, isL ? (p.tread === 'bois' ? 'bois' : tm[0] === 'grillage' ? 'grillage' : 'acier') : tm[0],
               tm[0] === 'grillage' ? { kgm2: 25 } : null);
-      if (p.tread === 'pliee' && !isL) m.plate('M', 'Pli de marche', 'XZ', [padd(a.I.pt, back), padd(a.O.pt, back), padd(a.O.pt, padd(back, pmul(a.t, tt))), padd(a.I.pt, padd(back, pmul(a.t, tt)))], p.fold, top - p.fold / 2, tt);
+      if ((p.tread === 'pliee' || p.tread === 'perforee') && !isL) m.plate('M', 'Pli de marche', 'XZ', [padd(a.I.pt, back), padd(a.O.pt, back), padd(a.O.pt, padd(back, pmul(a.t, tt))), padd(a.I.pt, padd(back, pmul(a.t, tt)))], p.fold, top - p.fold / 2, tt);
       if (isL) {
         var lp = landIdx[k].poly.concat([landIdx[k].poly[0]]).map(function (q) { return [q[0], top - th - profile(p.landingFrame).sh / 2, q[1]]; });
         m.chain('CP', 'Cadre de palier', p.landingFrame, lp, { cut: profile(p.landingFrame).vw });
@@ -1070,7 +1362,9 @@
           var E2 = getPt(L[Math.min(k + 1, nT)]), back2 = psub(E, psub(E2, E));
           cur = [[back2[0], k * h + dv, back2[1]]]; chains.push(cur);
         }
-        if (!cur) { var E1 = getPt(L[1]), st0 = psub(E, psub(E1, E)); cur = [[st0[0], dv, st0[1]]]; chains.push(cur); }
+        if (!cur) { // départ posé au sol : l'axe descend à sp.sh/2 le long de la ligne de nez prolongée
+          var E1 = getPt(L[1]), ge = pdist(E1, E), dd = (h + dv - sp.sh / 2) / (h / Math.max(ge, 1)), st0 = psub(E, pmul(pnorm(psub(E1, E)), dd));
+          cur = [[st0[0], sp.sh / 2, st0[1]]]; chains.push(cur); m.info('Limon profilé', 'Coupes d\'about (sol et chevêtre) à ajuster à l\'assemblage ; préférer un limon tôle (plat) pour un débit laser exact.'); }
         cur.push([E[0], y, E[1]]);
         if (landIdx[k]) cur = null;
       }
@@ -1086,7 +1380,14 @@
         o.push([lines[nT], p.H]); var ang = Math.atan2(p.H, lines[nT] - lines[0] + g), dx = D / Math.sin(ang);
         o.push([lines[nT], p.H - D / Math.cos(ang)]); o.push([lines[0] - g + dx, 0]);
         m.plate('CR', 'Crémaillère', 'XY', o, sp.T || 12, z, sp.T || 12);
+        if (fz === 0.2) m.flat({ name: 'Crémaillère (x2) · ' + sp.label, outline: o.map(function (q) { return [q[0] - (lines[0] - g), q[1]]; }), lines: [], texts: [] });
       });
+    } else if (sp.fam === 'PL' && (p.stringer === 'lateraux' || p.stringer === 'exterieur')) {
+      var tvis = (p.tread === 'pliee' || p.tread === 'beton' || p.tread === 'perforee') ? Math.max(p.fold, tt) : tt, dmin = p.dTop + tvis + 100;
+      m.rule(sp.sh >= dmin, 'Hauteur du limon', f0(sp.sh) + ' mm ≥ ' + f0(dmin) + ' (débord + marche + fixation)', f0(sp.sh) + ' mm < ' + f0(dmin) + ' mm : pas la place de fixer les marches', 'règle de construction');
+      m.rule(sp.T >= 8, 'Épaisseur du limon', f0(sp.T) + ' mm ≥ 8', f0(sp.T) + ' mm < 8 mm : soudure et rigidité insuffisantes', 'règle de construction');
+      if (p.stringer === 'lateraux') stringerPlates(m, p, band, L, nT, h, landIdx, true, sp, tvis);
+      stringerPlates(m, p, band, L, nT, h, landIdx, false, sp, tvis);
     } else edges.forEach(function (fn, ei) {
       var off = p.stringer === 'central' ? 0 : (ei === 0 && edges.length === 2 ? 1 : -1) * sp.wa / 2;
       edgeChains(function (l) {
@@ -1138,17 +1439,18 @@
       bendCheck(m, 'Résistance limon (volée ' + f0(flight) + ' mm)', pEd * flight * flight / 8, sp.sec.Wy, p.grade);
       deflCheck(m, 'Flèche limon', 5 * (gk + qkl) * Math.pow(Math.cos(ang * DEG), 2) * Math.pow(ls, 4) / (384 * E_ACIER * sp.sec.Iy), ls, 300);
     }
-    if (p.tread === 'larmee' || p.tread === 'pliee') {
-      var ts = p.tread === 'pliee' ? rects([[0, 0, g + p.nosing, tt], [0, tt, tt, p.fold - tt], [g + p.nosing - tt, tt, tt, p.fold - tt]]) : rects([[0, 0, g + p.nosing, tt]]);
+    if (p.tread === 'verre') m.info('Marche verre', 'Verre feuilleté trempé (ex. 3 x 8 mm) : résistance et glissance à justifier (avis technique / essais).');
+    if (p.tread === 'larmee' || p.tread === 'pliee' || p.tread === 'perforee') {
+      var ts = p.tread !== 'larmee' ? rects([[0, 0, g + p.nosing, tt], [0, tt, tt, p.fold - tt], [g + p.nosing - tt, tt, tt, p.fold - tt]]) : rects([[0, 0, g + p.nosing, tt]]);
       var span = band.W - (p.stringer === 'central' ? band.W * 0.5 : 0);
       bendCheck(m, 'Résistance marche', Math.max(1.5 * qk * 1e-3 * (g + p.nosing) * span * span / 8, 1.5 * 2000 * span / 4), ts.Wy, p.grade);
       deflCheck(m, 'Flèche marche (2 kN au centre)', 2000 * Math.pow(span, 3) / (48 * E_ACIER * ts.Iy), span, 250);
       if (p.tread === 'larmee' && m.checks.some(function (c) { return c.level === 'fail' && /marche/.test(c.rule); })) m.info('Conseil', 'Tôle larmée plane trop souple : choisir « Tôle pliée » ou ajouter une cornière de raidissage sous le nez.');
-      if (p.tread === 'pliee') m.flat(treadFlat(g + p.nosing, band.W - 4, p.fold, tt));
+      if (p.tread === 'pliee' || p.tread === 'perforee') m.flat(treadFlat(g + p.nosing, band.W - 4, p.fold, tt));
     }
     m.info('Charges', 'qk = ' + f1(qk) + ' kN/m², Qk = 2 kN ; γG = 1,35, γQ = 1,5 (à confirmer : NF P06-111-2)', N.EC1);
     m.info('Exécution', 'Escalier = ouvrage porteur : NF EN 1090-2, EXC2 par défaut.', N.EXE);
-    return { n: n, h: h, g: g, lines: lines, L: L, nT: nT };
+    return { n: n, h: h, g: g, lines: lines, L: L, nT: nT, landIdx: landIdx };
   }
 
   /** Symétrie Z (sens « gauche »). */
@@ -1160,6 +1462,7 @@
       else p.outline = p.outline.map(function (q) { return [-q[0], q[1]]; });
     });
     m.surfaces.forEach(function (s) { ['a', 'b', 'base'].forEach(function (k) { if (s[k]) s[k][2] = -s[k][2]; }); });
+    m.masonry.forEach(function (x) { x.poly = x.poly.map(function (q) { return [q[0], -q[1]]; }); });
   }
 
   function straightRunFor(p) { // reculement de la ligne de foulée
@@ -1218,6 +1521,55 @@
     ]
   };
 
+  function offsetPoly(P, d) { // décalage d'une polyligne plane (normale gauche × d)
+    return P.map(function (q, i) {
+      var a = i > 0 ? pnorm(psub(q, P[i - 1])) : pnorm(psub(P[1], q)), b = i + 1 < P.length ? pnorm(psub(P[i + 1], q)) : a;
+      var n1 = [-a[1], a[0]], n2 = [-b[1], b[0]], nn = pnorm(padd(n1, n2)), k = 1 / Math.max(0.3, nn[0] * n1[0] + nn[1] * n1[1]);
+      return padd(q, pmul(nn, d * k));
+    });
+  }
+  /** Contexte maçonné d'un escalier : sols, plancher haut avec trémie, murs d'échiffre, main courante murale. */
+  function stairMasonry(m, p, band, r, kind) {
+    var all = band.inner.concat(band.outer), x0 = Math.min.apply(null, all.map(function (q) { return q[0]; })), x1 = Math.max.apply(null, all.map(function (q) { return q[0]; }));
+    var z0 = Math.min.apply(null, all.map(function (q) { return q[1]; })), z1 = Math.max.apply(null, all.map(function (q) { return q[1]; })), M = 1200;
+    var sp = profile(p.stringer === 'central' ? p.spc : p.sp), st = sp.fam === 'PL' ? sp.T : sp.wa, slabT = kind === 'droit' ? (p.slab || 200) : p.slabT, x0r = x0 - r.g - p.nosing;
+    if (p.floorLow) { mBox(m, 'Dalle basse', 'beton', x0r - M, z0 - M, x1 + M, z1 + M, -220, 200); mBox(m, 'Revêtement', p.floorMat, x0r - M, z0 - M, x1 + M, z1 + M, -20, 20); }
+    if (p.upper) {
+      var S = r.lines[r.nT], hole = kind === 'droit' ? [p.opening > 0 ? S - p.opening : x0r - 50, z0 - st - 150, S, z1 + st + 150] : [x0 - st - 150, z0 - st - 150, x1 + st + 150, z1 + st + 150];
+      if (kind === 'quart') hole[3] = z1; if (kind !== 'droit' && kind !== 'quart') hole[0] = x0;
+      mSlab(m, 'Plancher haut', 'beton', [x0r - M, z0 - M, x1 + M, z1 + M], hole, p.H - slabT, slabT - 20);
+      mSlab(m, 'Revêtement', p.floorMat, [x0r - M, z0 - M, x1 + M, z1 + M], hole, p.H - 20, 20);
+      m.value('Trémie', f0(hole[2] - hole[0]) + ' x ' + f0(hole[3] - hole[1]) + ' mm');
+    }
+    var top = p.upper ? p.H - slabT : p.H + 1200, bot = p.floorLow ? -220 : 0, sides = p.walls === 'both' ? ['int', 'ext'] : p.walls === 'aucun' ? [] : [p.walls];
+    sides.forEach(function (sd) {
+      var P = sd === 'int' ? band.inner : band.outer, sg = sd === 'int' ? 1 : -1;
+      for (var i = 0; i + 1 < P.length; i++) mStrip(m, 'Mur d\'échiffre', p.masonMat, P[i], P[i + 1], sg * (st + 10), sg * (st + 10 + p.wallT), bot, top - bot, i === 0 ? 0 : p.wallT);
+    });
+    var mur = p.mcMural === 'both' ? ['int', 'ext'] : p.mcMural === 'aucun' ? [] : [p.mcMural];
+    mur.forEach(function (sd) {
+      var pts = [], gy = [], sg = sd === 'int' ? 1 : -1, mp = profile(p.mcMuralP);
+      for (var k = 0; k <= r.nT; k++) { var E = sd === 'int' ? r.L[k].I : r.L[k].O; if (!pts.length || pdist(E.pt, pts[pts.length - 1]) > 1) { pts.push(E.pt); gy.push((k + 1) * r.h); } }
+      var off = offsetPoly(pts, sg * (st + 10 - 70 - mp.wa / 2)), line = off.map(function (q, i) { return [q[0], gy[i] + 900 - mp.sh / 2, q[1]]; });
+      m.chain('MCM', 'Main courante murale', mp.id, line);
+      var Ltot = polyLen(off), ns = Math.max(2, Math.ceil(Ltot / 1000) + 1), wallPts = offsetPoly(pts, sg * (st + 10));
+      for (var j = 0; j < ns; j++) {
+        var t = Ltot * j / (ns - 1), a = polyAt(off, t), b = polyAt(wallPts, t * polyLen(wallPts) / Ltot), y = 0;
+        var accu = 0, yy = gy[0]; for (var q = 0; q + 1 < off.length; q++) { var l = pdist(off[q], off[q + 1]); if (t <= accu + l) { yy = gy[q] + (gy[q + 1] - gy[q]) * (t - accu) / Math.max(l, 1e-9); break; } accu += l; yy = gy[q + 1]; }
+        m.member('SMC', 'Support de main courante', 'RP12', [a[0], yy + 900 - mp.sh - 30, a[1]], [b[0], yy + 900 - mp.sh - 30, b[1]]);
+      }
+      m.rule(p.walls === 'both' || p.walls === sd, 'Main courante murale (' + (sd === 'int' ? 'intérieur' : 'extérieur') + ')', 'fixée sur mur d\'échiffre', 'pas de mur de ce côté : prévoir un support (cloison, limon)', 'cohérence', true);
+    });
+    masonValue(m);
+  }
+
+  function simpleStairMasonry(m, p, hx0, hx1, hz0, hz1) {
+    var M = 1200;
+    if (p.floorLow) { mBox(m, 'Dalle basse', 'beton', hx0 - M, hz0 - M, hx1 + M, hz1 + M, -220, 200); mBox(m, 'Revêtement', p.floorMat, hx0 - M, hz0 - M, hx1 + M, hz1 + M, -20, 20); }
+    if (p.upper) { mSlab(m, 'Plancher haut', 'beton', [hx0 - M, hz0 - M, hx1 + M, hz1 + M], [hx0, hz0, hx1, hz1], p.H - p.slabT, p.slabT - 20); mSlab(m, 'Revêtement', p.floorMat, [hx0 - M, hz0 - M, hx1 + M, hz1 + M], [hx0, hz0, hx1, hz1], p.H - 20, 20); }
+    masonValue(m);
+  }
+
   function stairFamily(id, label, kind) {
     family({
       id: id, cat: 'Escaliers', label: label, icon: 'stair',
@@ -1230,7 +1582,8 @@
         else band = stairBand('deux', W, p.L1, 2 * W + p.jour, p.L1, f);
         if (kind !== 'droit' && (p.L1 < W + 200 || (p.L2 && p.L2 < W + 200 && kind !== 'deux'))) throw new Error('Emprise trop courte par rapport à l\'emmarchement.');
         r = buildStair(m, p, band, kind === 'droit' ? 'none' : p.mode, p.kb || 2);
-        if (kind === 'droit') { headroomStraight(m, p, r.h, r.g, r.lines[r.nT]); stringerFlat(m, p, r); }
+        stairMasonry(m, p, band, r, kind);
+        if (kind === 'droit') headroomStraight(m, p, r.h, r.g, r.lines[r.nT]);
         else m.info('Échappée', 'À vérifier en 3D sous la trémie (géométrie tournante).');
         if (p.turn === 'droite' && kind !== 'droit') { /* construit à droite */ } else if (kind !== 'droit') mirrorZ(m);
         return m;
@@ -1264,7 +1617,11 @@
       { k: 'mc', l: 'Main courante (cintrée)', t: 'prof', d: 'TRD42.4x2', list: 'mainCourante', g: 'Garde-corps' },
       { k: 'bar', l: 'Barreaux', t: 'prof', d: 'TC20x20x1.5', list: 'barreau', g: 'Garde-corps' },
       { k: 'gap', l: 'Vide maxi entre barreaux', t: 'num', d: 110, u: 'mm', g: 'Garde-corps' }
-    ],
+    ].concat(masonParams({ mat: 'enduit-blanc', floor: 'parquet', extra: [
+      { k: 'floorLow', l: 'Dalle basse (sol fini)', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'upper', l: 'Plancher haut avec trémie', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'slabT', l: 'Épaisseur du plancher haut', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['upper', true] },
+      { k: 'cage', l: 'Cage maçonnée (4 murs)', t: 'bool', d: false, g: 'Maçonnerie & contexte' }] })),
     build: function (p) {
       var m = new Model('Escalier hélicoïdal Ø' + p.D + ' H' + p.H), n = Math.max(3, Math.round(p.H / p.h)), h = p.H / n, nT = n - 1;
       var fut = profile(p.fut), R = p.D / 2, ri = fut.B / 2, rf = p.walkR > 0 ? p.walkR : ri + (R - ri) * 2 / 3;
@@ -1298,6 +1655,13 @@
         var a = (k + (j + 0.5) / nb) * dth, y0 = (k + 1) * h, ytop = y0 + p.railH - mcp.sh + (j + 0.5) / nb * h;
         m.member('B', 'Barreau', bar.id, [rr * Math.cos(a), y0, rr * Math.sin(a)], [rr * Math.cos(a), ytop, rr * Math.sin(a)]);
       }
+      var Rm = R + 1200, hs = R + 150;
+      if (p.floorLow) { mBox(m, 'Dalle basse', 'beton', -Rm, -Rm, Rm, Rm, -220, 200); mBox(m, 'Revêtement', p.floorMat, -Rm, -Rm, Rm, Rm, -20, 20); }
+      if (p.upper) { mSlab(m, 'Plancher haut', 'beton', [-Rm, -Rm, Rm, Rm], [-hs, -hs, hs, hs], p.H - p.slabT, p.slabT - 20); mSlab(m, 'Revêtement', p.floorMat, [-Rm, -Rm, Rm, Rm], [-hs, -hs, hs, hs], p.H - 20, 20); m.value('Trémie', f0(2 * hs) + ' x ' + f0(2 * hs) + ' mm'); }
+      if (p.cage) { var c0 = R + 60, c1 = c0 + 200, top2 = p.upper ? p.H - p.slabT : p.H + 1200;
+        mBox(m, 'Mur de cage', p.masonMat, -c1, -c1, c1, -c0, -220, top2 + 220); mBox(m, 'Mur de cage', p.masonMat, -c1, c0, c1, c1, -220, top2 + 220);
+        mBox(m, 'Mur de cage', p.masonMat, -c1, -c0, -c0, c0, -220, top2 + 220); mBox(m, 'Mur de cage', p.masonMat, c0, -c0, c1, c0, -220, top2 + 220); }
+      masonValue(m);
       if (p.turn === 'gauche') mirrorZ(m);
       var headroom = (2 * Math.PI / dth) * h - tt;
       m.value('Hauteurs / marches', n + ' / ' + nT); m.value('Hauteur de marche', f1(h) + ' mm'); m.value('Angle par marche', f1(dth / DEG) + '°');
@@ -1325,7 +1689,10 @@
       { k: 'tread', l: 'Type de marche', t: 'sel', d: 'larmee', o: TREADS, g: 'Marches' },
       { k: 'sp', l: 'Limons', t: 'prof', d: 'PL160x10', list: 'limon', g: 'Limons' },
       { k: 'mc', l: 'Mains courantes (2 côtés)', t: 'prof', d: 'TRD33.7x2', list: 'mainCourante', g: 'Garde-corps' }
-    ],
+    ].concat(masonParams({ mat: 'enduit-blanc', floor: 'parquet', extra: [
+      { k: 'floorLow', l: 'Dalle basse (sol fini)', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'upper', l: 'Plancher haut avec trémie', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'slabT', l: 'Épaisseur du plancher haut', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['upper', true] }] })),
     build: function (p) {
       var m = new Model('Échelle de meunier H' + p.H), n = Math.max(2, Math.round(p.H / p.h)), h = p.H / n, g = h / Math.tan(p.angle * DEG), sp = profile(p.sp);
       var tm = treadMaterial(p.tread), L = n * g;
@@ -1342,6 +1709,7 @@
       m.rule(p.angle >= 45 && p.angle <= 75, 'Inclinaison', f0(p.angle) + '° (45–75° usuel)', f0(p.angle) + '° hors 45–75°', 'usage', true);
       m.rule(p.depth >= 120, 'Profondeur de marche', f0(p.depth) + ' mm ≥ 120 (usuel)', f0(p.depth) + ' mm', 'usage', true);
       m.info('Usage', 'Accès occasionnel (combles, mezzanine privée) : à descendre face aux marches. Non admis comme escalier principal / ERP.');
+      simpleStairMasonry(m, p, -300, L + 50, -p.W / 2 - 150, p.W / 2 + 150);
       return m;
     }
   });
@@ -1356,7 +1724,10 @@
       { k: 'tread', l: 'Type de marche', t: 'sel', d: 'larmee', o: TREADS, g: 'Marches' },
       { k: 'spc', l: 'Limon central', t: 'prof', d: 'TR120x60x4', list: 'limonCentral', g: 'Limons' },
       { k: 'mc', l: 'Mains courantes', t: 'prof', d: 'TRD33.7x2', list: 'mainCourante', g: 'Garde-corps' }
-    ],
+    ].concat(masonParams({ mat: 'enduit-blanc', floor: 'parquet', extra: [
+      { k: 'floorLow', l: 'Dalle basse (sol fini)', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'upper', l: 'Plancher haut avec trémie', t: 'bool', d: true, g: 'Maçonnerie & contexte' },
+      { k: 'slabT', l: 'Épaisseur du plancher haut', t: 'num', d: 200, u: 'mm', g: 'Maçonnerie & contexte', show: ['upper', true] }] })),
     build: function (p) {
       var m = new Model('Escalier à pas japonais H' + p.H), n = Math.max(2, Math.round(p.H / p.h)), h = p.H / n, g = h / Math.tan(p.angle * DEG), sp = profile(p.spc), tm = treadMaterial(p.tread);
       m.member('LIM', 'Limon central', sp.id, [0, 0, 0], [n * g, p.H - 40, 0]);
@@ -1369,6 +1740,7 @@
       m.value('Pas', n - 1); m.value('Hauteur entre pas', f1(h) + ' mm'); m.value('Hauteur entre pas d\'un même pied', f0(2 * h) + ' mm'); m.value('Giron', f0(g) + ' mm');
       m.rule(p.angle >= 50 && p.angle <= 70, 'Inclinaison', f0(p.angle) + '° (50–70° usuel)', f0(p.angle) + '° hors 50–70°', 'usage', true);
       m.info('Usage', 'Gain de place pour accès occasionnel ; non admis en ERP ni en parties communes.');
+      simpleStairMasonry(m, p, -300, n * g + 50, -p.W / 2 - 150, p.W / 2 + 150);
       return m;
     }
   });
@@ -1376,15 +1748,19 @@
   // ================================================================== STRUCTURES & DIVERS
   var FLOOR_LOADS = [['logement', 'Logement (1,5 kN/m²)'], ['bureau', 'Bureaux (2,5 kN/m²)'], ['erp', 'ERP / commerce (5,0 kN/m²)'], ['industriel', 'Industriel / atelier (5,0 kN/m²)'], ['stockage', 'Stockage (7,5 kN/m²)']];
   var QK = { logement: 1.5, bureau: 2.5, erp: 5.0, industriel: 5.0, stockage: 7.5 };
-  var DECKS = [['caillebotis', 'Caillebotis 30x3 (≈ 25 kg/m²)'], ['larmee', 'Tôle larmée 5/7'], ['bois', 'Panneau bois CTBX 22'], ['bac', 'Bac acier + dalle béton 80']];
+  var DECKS = [['caillebotis', 'Caillebotis 30x3 (≈ 25 kg/m²)'], ['caillebotis-presse', 'Caillebotis pressé 30x2'], ['larmee', 'Tôle larmée 5/7'], ['tole-perforee', 'Tôle perforée 4 mm'], ['bois', 'Panneau bois CTBX 22'], ['composite', 'Lames composite 25'], ['bac', 'Bac acier + dalle béton 80'], ['collaborant', 'Plancher collaborant 120']];
   function deck(m, poly, top, type) {
     if (type === 'caillebotis') m.plate('PT', 'Caillebotis', 'XZ', poly, 30, top - 15, 30, 'grillage', { kgm2: 25 });
     else if (type === 'bois') m.plate('PT', 'Platelage bois', 'XZ', poly, 22, top - 11, 22, 'bois');
+    else if (type === 'caillebotis-presse') m.plate('PT', 'Caillebotis pressé', 'XZ', poly, 30, top - 15, 30, 'grillage', { kgm2: 21 });
+    else if (type === 'tole-perforee') m.plate('PT', 'Tôle perforée', 'XZ', poly, 4, top - 2, 4, 'acier', { fillRatio: 0.6 });
+    else if (type === 'composite') m.plate('PT', 'Lames composite', 'XZ', poly, 25, top - 12.5, 25, 'composite');
+    else if (type === 'collaborant') { m.plate('PT', 'Dalle collaborante', 'XZ', poly, 120, top - 60, 120, 'beton'); }
     else if (type === 'bac') { m.plate('PT', 'Dalle béton', 'XZ', poly, 80, top - 40, 80, 'beton'); m.plate('PT', 'Bac acier', 'XZ', poly, 1, top - 80.5, 1, 'acier'); }
     else m.plate('PT', 'Tôle larmée', 'XZ', poly, 6, top - 3, 6, 'acier');
-    return { caillebotis: 30, bois: 22, bac: 81, larmee: 6 }[type] || 6;
+    return { caillebotis: 30, 'caillebotis-presse': 30, bois: 22, composite: 25, bac: 81, collaborant: 120, 'tole-perforee': 4, larmee: 6 }[type] || 6;
   }
-  function deckKg(type) { return { caillebotis: 25, bois: 12, bac: 205, larmee: 47 }[type] || 47; }
+  function deckKg(type) { return { caillebotis: 25, 'caillebotis-presse': 21, bois: 12, composite: 30, bac: 205, collaborant: 250, 'tole-perforee': 19, larmee: 47 }[type] || 47; }
   function beamChecks(m, label, prof, span, qLine, gLine, grade, lim) { // qLine, gLine en N/mm
     var p = profile(prof), Med = (1.35 * gLine + 1.5 * qLine) * span * span / 8, d = 5 * (gLine + qLine) * Math.pow(span, 4) / (384 * E_ACIER * p.sec.Iy);
     bendCheck(m, 'Résistance ' + label + ' (' + p.label + ', L = ' + f0(span) + ')', Med, p.sec.Wy, grade);
@@ -1401,10 +1777,10 @@
       { k: 'P', l: 'Profondeur (Z)', t: 'num', d: 4000, u: 'mm', g: 'Dimensions' },
       { k: 'H', l: 'Niveau fini du plancher', t: 'num', d: 2800, u: 'mm', g: 'Dimensions' },
       { k: 'wall', l: 'Adossée à un mur (côté arrière)', t: 'bool', d: false, g: 'Dimensions' },
-      { k: 'colP', l: 'Poteaux', t: 'prof', d: 'TC120x120x5', list: 'poteauStructure', g: 'Ossature' },
+      { k: 'colP', l: 'Poteaux', t: 'prof', d: '__auto', auto: 'Flambement', list: 'poteauStructure', g: 'Ossature' },
       { k: 'colMax', l: 'Entraxe maxi poteaux', t: 'num', d: 3500, u: 'mm', g: 'Ossature' },
-      { k: 'beam', l: 'Poutres principales', t: 'prof', d: 'IPE220', list: 'poutre', g: 'Ossature' },
-      { k: 'joist', l: 'Solives', t: 'prof', d: 'IPE140', list: 'poutre', g: 'Ossature' },
+      { k: 'beam', l: 'Poutres principales', t: 'prof', d: '__auto', auto: 'poutre principale', list: 'poutre', g: 'Ossature' },
+      { k: 'joist', l: 'Solives', t: 'prof', d: '__auto', auto: 'solive', list: 'poutre', g: 'Ossature' },
       { k: 'joistMax', l: 'Entraxe maxi solives', t: 'num', d: 800, u: 'mm', g: 'Ossature' },
       { k: 'deck', l: 'Platelage', t: 'sel', d: 'caillebotis', o: DECKS, g: 'Plancher' },
       { k: 'gcFront', l: 'Garde-corps avant', t: 'bool', d: true, g: 'Garde-corps' },
@@ -1414,12 +1790,12 @@
       { k: 'accessX', l: 'Position de l\'ouverture (X)', t: 'num', d: 4500, u: 'mm', g: 'Accès' },
       { k: 'accessW', l: 'Largeur de l\'ouverture', t: 'num', d: 900, u: 'mm', g: 'Accès' },
       { k: 'grade', l: 'Nuance', t: 'sel', d: 'S235', o: GRADES, g: 'Résistance' }
-    ],
+    ].concat(masonParams({ mat: 'parpaing-enduit', floor: 'beton-lisse', extra: [] })),
     build: function (p) {
       var m = new Model('Mezzanine ' + p.L + 'x' + p.P + ' à ' + p.H), qk = p.qk > 0 ? p.qk : QK[p.use];
       var bm = profile(p.beam), js = profile(p.joist), col = profile(p.colP);
       var nx = Math.max(1, Math.ceil(p.L / p.colMax - 1e-9)), ex = p.L / nx, lines = p.wall ? [0] : [0, p.P];
-      var dt = { caillebotis: 30, bois: 22, bac: 81, larmee: 6 }[p.deck], yTop = p.H - dt, yB = yTop - bm.sh / 2;
+      var dt = { caillebotis: 30, 'caillebotis-presse': 30, bois: 22, composite: 25, bac: 81, collaborant: 120, 'tole-perforee': 4, larmee: 6 }[p.deck], yTop = p.H - dt, yB = yTop - bm.sh / 2;
       lines.forEach(function (z) {
         for (var i = 0; i <= nx; i++) {
           m.member('PO', 'Poteau', col.id, [i * ex, 12, z], [i * ex, yTop - bm.sh, z]);
@@ -1447,13 +1823,13 @@
       if (p.access === 'droit') {
         var sd = FAMILIES['escalier-droit'], sp = defaults('escalier-droit');
         sp.H = p.H; sp.W = p.accessW - 40; sp.usage = p.use === 'industriel' || p.use === 'stockage' ? 'industriel' : p.use === 'erp' ? 'erp' : 'collectif';
-        sp.opening = 0; sp.rails = 'both'; sp.h = sp.usage === 'industriel' ? 200 : sp.usage === 'erp' ? 155 : 165;
+        sp.opening = 0; sp.rails = 'both'; sp.floorLow = false; sp.upper = false; sp.walls = 'aucun'; sp.h = sp.usage === 'industriel' ? 200 : sp.usage === 'erp' ? 155 : 165;
         if (sp.usage === 'industriel') { sp.blondel = 640; sp.infill = 'industriel'; sp.railH = 1000; }
-        var sm = sd.build(Object.assign({}, sp)), run = straightRunFor(sp);
+        var sm = solve('escalier-droit', coerce('escalier-droit', sp)).m, run = straightRunFor(sp);
         m.merge(sm, [a1 - 20, 0, -run], -90);
         m.value('Escalier d\'accès', 'intégré (' + sm.values.filter(function (v) { return /marches/.test(v[0]); }).map(function (v) { return v[1]; })[0] + ')');
       } else if (p.access === 'echelle') {
-        var lm = FAMILIES['echelle'].build(Object.assign(defaults('echelle'), { climb: p.H }));
+        var lm = solve('echelle', coerce('echelle', { climb: p.H, context: 'aucun' })).m;
         m.merge(lm, [a0 + 50, 0, -250], 0);
       }
       // vérifications
@@ -1464,6 +1840,9 @@
       bucklingCheck(m, 'Flambement poteau (Lf = ' + f0(p.H) + ')', 2 * rB, col.id, p.H, p.grade);
       m.value('Charge d\'exploitation', f1(qk) + ' kN/m²'); m.value('Trame poteaux', nx + ' x ' + f0(ex) + ' mm'); m.value('Solives', (ns + 1) + ' à ' + f0(es) + ' mm');
       m.value('Surface', f1(p.L * p.P / 1e6) + ' m²');
+      mBox(m, 'Dalle', 'beton', -1500, -5500, p.L + 1500, p.P + 1500, -220, 200); mBox(m, 'Revêtement', p.floorMat, -1500, -5500, p.L + 1500, p.P + 1500, -20, 20);
+      if (p.wall) mBox(m, 'Mur d\'adossement', p.masonMat, -1000, p.P + 60, p.L + 1000, p.P + 260, -220, p.H + 1700);
+      masonValue(m);
       m.info('Charges', 'qk = ' + f1(qk) + ' kN/m² (valeurs à confirmer avec NF P06-111-2) ; contreventement, assemblages et fondations à justifier.', N.EC1);
       m.info('Exécution', 'Ouvrage porteur : NF EN 1090-2, EXC2 par défaut.', N.EXE);
       return m;
@@ -1476,21 +1855,22 @@
       { k: 'L', l: 'Portée', t: 'num', d: 6000, u: 'mm', g: 'Dimensions' },
       { k: 'W', l: 'Largeur utile', t: 'num', d: 1000, u: 'mm', g: 'Dimensions' },
       { k: 'H', l: 'Hauteur des appuis (0 = posée)', t: 'num', d: 0, u: 'mm', g: 'Dimensions' },
-      { k: 'beam', l: 'Poutres de rive', t: 'prof', d: 'UPN200', list: 'poutre', g: 'Ossature' },
+      { k: 'beam', l: 'Poutres de rive', t: 'prof', d: '__auto', auto: 'poutre de rive', list: 'poutre', g: 'Ossature' },
       { k: 'cross', l: 'Traverses', t: 'prof', d: 'L50x50x5', list: 'corniere', g: 'Ossature' },
       { k: 'crossMax', l: 'Entraxe maxi traverses', t: 'num', d: 1000, u: 'mm', g: 'Ossature' },
       { k: 'deck', l: 'Platelage', t: 'sel', d: 'caillebotis', o: DECKS, g: 'Plancher' },
       { k: 'qk', l: 'Charge d\'exploitation', t: 'num', d: 5, u: 'kN/m²', step: 0.5, g: 'Résistance' },
       { k: 'gcType', l: 'Garde-corps', t: 'sel', d: 'industriel', o: [['industriel', 'Industriel'], ['barreaux', 'Barreaudage'], ['verre', 'Verre'], ['aucun', 'Aucun']], g: 'Garde-corps' },
       { k: 'grade', l: 'Nuance', t: 'sel', d: 'S235', o: GRADES, g: 'Résistance' }
-    ],
+    ].concat(masonParams({ mat: 'beton', floor: 'gazon', extra: [
+      { k: 'supports', l: 'Appuis', t: 'sel', d: 'culees', o: [['culees', 'Culées maçonnées'], ['poteaux', 'Poteaux acier']], g: 'Maçonnerie & contexte' }] })),
     build: function (p) {
       var m = new Model('Passerelle L' + p.L + ' x ' + p.W), bm = profile(p.beam), y = p.H + 0, top = y + bm.sh;
       [-bm.B / 2, p.W + bm.B / 2].forEach(function (z, i) { m.member('PR', 'Poutre de rive', bm.id, [0, y + bm.sh / 2, z], [p.L, y + bm.sh / 2, z], { rot: i ? 180 : 0 }); });
       var n = Math.max(1, Math.ceil(p.L / p.crossMax - 1e-9));
       for (var i = 0; i <= n; i++) { var x = clamp(i * p.L / n, 30, p.L - 30); m.member('TV', 'Traverse', p.cross, [x, top - 60, 0], [x, top - 60, p.W]); }
       var dt = deck(m, [[0, 0], [p.L, 0], [p.L, p.W], [0, p.W]], top, p.deck);
-      if (p.H > 0) [[0, -bm.B / 2], [0, p.W + bm.B / 2], [p.L, -bm.B / 2], [p.L, p.W + bm.B / 2]].forEach(function (q) { m.member('PO', 'Poteau d\'appui', 'TC120x120x5', [q[0], 0, q[1]], [q[0], y, q[1]]); });
+      if (p.H > 0 && p.supports === 'poteaux') [[0, -bm.B / 2], [0, p.W + bm.B / 2], [p.L, -bm.B / 2], [p.L, p.W + bm.B / 2]].forEach(function (q) { m.member('PO', 'Poteau d\'appui', 'TC120x120x5', [q[0], 0, q[1]], [q[0], y, q[1]]); });
       if (p.gcType !== 'aucun') [[[0, -bm.B], [p.L, -bm.B]], [[0, p.W + bm.B], [p.L, p.W + bm.B]]].forEach(function (pt, k) {
         var st = railRun(m, pt, [top, top], { H: p.gcType === 'industriel' ? 1100 : 1000, post: 'TC50x50x4', emax: 1500, mc: 'TRD42.4x2', mcPos: 'dessus', lb: p.gcType !== 'industriel', lbProf: 'TR40x20x2', jeu: 40,
           pose: 'anglaise', drop: bm.sh - 20, plate: null, spec: { type: p.gcType, bar: 'TC20x20x2', gap: 110, glass: '55.2', glassFix: 'pinces', rail: 'TR40x20x2', toe: 'PL100x5' }, side: k ? 1 : -1 });
@@ -1499,6 +1879,11 @@
       var g0 = deckKg(p.deck) * 9.81e-6 * p.W / 2 + bm.kgm * 9.81e-3 + 15 * 9.81e-3;
       beamChecks(m, 'poutre de rive', bm.id, p.L, p.qk * 1e-3 * p.W / 2, g0, p.grade, 300);
       m.info('Vibrations', 'Passerelle piétonne : vérifier la fréquence propre (> 3 Hz usuel) et le contreventement horizontal.');
+      var zA = -bm.B - 400, zB = p.W + bm.B + 400;
+      if (p.supports === 'culees') { mBox(m, 'Culée', p.masonMat, -900, zA, 150, zB, -800, p.H + 800); mBox(m, 'Culée', p.masonMat, p.L - 150, zA, p.L + 900, zB, -800, p.H + 800); }
+      mBox(m, 'Sol', p.floorMat, -3500, zA - 1500, -900, zB + 1500, p.H - 220 > -800 ? p.H - 220 : -220, 200);
+      mBox(m, 'Sol', p.floorMat, p.L + 900, zA - 1500, p.L + 3500, zB + 1500, p.H - 220 > -800 ? p.H - 220 : -220, 200);
+      masonValue(m);
       m.info('Exécution', 'Ouvrage porteur : NF EN 1090-2, EXC2 par défaut.', N.EXE);
       return m;
     }
@@ -1511,16 +1896,17 @@
       { k: 'A', l: 'Avancée', t: 'num', d: 1200, u: 'mm', g: 'Dimensions' },
       { k: 'Hf', l: 'Hauteur de fixation', t: 'num', d: 2600, u: 'mm', g: 'Dimensions' },
       { k: 'pente', l: 'Pente', t: 'num', d: 5, u: '°', g: 'Dimensions' },
-      { k: 'cons', l: 'Consoles', t: 'prof', d: 'TR100x50x4', list: 'cadre', g: 'Ossature' },
+      { k: 'cons', l: 'Consoles', t: 'prof', d: '__auto', auto: 'console', list: 'cadre', g: 'Ossature' },
       { k: 'emax', l: 'Entraxe maxi consoles', t: 'num', d: 1500, u: 'mm', g: 'Ossature' },
       { k: 'rive', l: 'Rive avant', t: 'prof', d: 'TR80x40x3', list: 'cadre', g: 'Ossature' },
       { k: 'ties', l: 'Tirants', t: 'bool', d: true, g: 'Ossature' },
-      { k: 'tie', l: 'Tirant', t: 'prof', d: 'RP16', list: 'barreau', g: 'Ossature', show: ['ties', true] },
+      { k: 'tie', l: 'Tirant', t: 'prof', d: '__auto', auto: 'Tirant', list: 'barreau', g: 'Ossature', show: ['ties', true] },
       { k: 'tieH', l: 'Hauteur d\'ancrage des tirants', t: 'num', d: 700, u: 'mm', g: 'Ossature', show: ['ties', true] },
       { k: 'cover', l: 'Couverture', t: 'sel', d: 'verre', o: [['verre', 'Verre feuilleté 66.2'], ['tole', 'Tôle acier 2 mm'], ['polycarbonate', 'Polycarbonate 16 mm']], g: 'Couverture' },
       { k: 'snow', l: 'Neige + entretien', t: 'num', d: 0.9, u: 'kN/m²', step: 0.1, g: 'Résistance' },
       { k: 'grade', l: 'Nuance', t: 'sel', d: 'S235', o: GRADES, g: 'Résistance' }
-    ],
+    ].concat(masonParams({ mat: 'enduit-ton-pierre', floor: 'dalle-pierre', extra: [
+      { k: 'facade', l: 'Façade avec porte', t: 'bool', d: true, g: 'Maçonnerie & contexte' }] })),
     build: function (p) {
       var m = new Model('Auvent ' + p.L + 'x' + p.A), n = Math.max(1, Math.ceil(p.L / p.emax - 1e-9)), e = p.L / n, drop = p.A * Math.tan(p.pente * DEG), cp = profile(p.cons);
       for (var i = 0; i <= n; i++) {
@@ -1546,6 +1932,13 @@
         m.value('Moment d\'encastrement (ELU)', f1((1.35 * gk + 1.5 * qk) * A * A / 2 / 1e6) + ' kN·m');
       }
       m.value('Consoles', (n + 1) + ' à ' + f0(e) + ' mm');
+      if (p.facade) {
+        var Lw = p.L + 1600, Hw = p.Hf + (p.ties ? p.tieH : 0) + 700;
+        mWall(m, 'Façade', p.masonMat, [-800, -10], [p.L + 800, -10], 0, -220, -20, Hw + 20, [{ s0: Lw / 2 - 500, s1: Lw / 2 + 500, y0: -20, y1: 2200 }]);
+        mBox(m, 'Seuil', 'pierre', p.L / 2 - 560, -10, p.L / 2 + 560, 60, -20, 40);
+      }
+      mBox(m, 'Terrasse', p.floorMat, -800, -10, p.L + 800, p.A + 1500, -200, 200);
+      masonValue(m);
       m.info('Charges climatiques', 'Neige NF EN 1991-1-3 et vent NF EN 1991-1-4 selon la région et l\'altitude ; soulèvement au vent à vérifier.', N.EC1);
       if (p.cover === 'verre') m.info('Verre', 'Verre feuilleté obligatoire en toiture (sécurité en cas de bris).');
       return m;
@@ -1565,7 +1958,7 @@
       { k: 'slat', l: 'Chevrons / lames', t: 'prof', d: 'TR80x40x3', list: 'cadre', g: 'Toiture' },
       { k: 'slatGap', l: 'Entraxe des lames', t: 'num', d: 200, u: 'mm', g: 'Toiture' },
       { k: 'slatRot', l: 'Orientation des lames', t: 'num', d: 0, u: '°', g: 'Toiture' }
-    ],
+    ].concat(masonParams({ mat: 'enduit-ton-pierre', floor: 'terrasse-bois' })),
     build: function (p) {
       var m = new Model('Pergola ' + p.L + 'x' + p.P), bm = profile(p.beam), col = profile(p.col), yb = p.H - bm.sh / 2;
       var nx = Math.max(1, Math.ceil(p.L / p.colMax - 1e-9)), zs = p.adossee ? [0] : [0, p.P];
@@ -1576,6 +1969,9 @@
       var sl = profile(p.slat), n = Math.max(1, Math.round(p.L / p.slatGap));
       for (var j = 1; j < n; j++) m.member('LA', 'Lame', sl.id, [j * p.L / n, p.H + sl.sh / 2, 0], [j * p.L / n, p.H + sl.sh / 2, p.P], { rot: p.slatRot });
       m.value('Lames', n - 1); m.value('Poteaux', (nx + 1) * zs.length);
+      mBox(m, 'Terrasse', p.floorMat, -600, -600, p.L + 600, p.P + 600, -150, 150);
+      if (p.adossee) mBox(m, 'Mur', p.masonMat, -1000, p.P + 80, p.L + 1000, p.P + 280, -150, p.H + 900);
+      masonValue(m);
       m.info('Charges', 'Pergola ouverte : vent et éventuelle toile / lames orientables à justifier (NF EN 1991-1-4).', N.EC1);
       return m;
     }
@@ -1591,13 +1987,13 @@
       { k: 'roof', l: 'Toiture', t: 'sel', d: '2pans', o: [['2pans', '2 pans'], ['mono', 'Monopente']], g: 'Dimensions' },
       { k: 'pente', l: 'Pente', t: 'num', d: 10, u: '°', g: 'Dimensions' },
       { k: 'col', l: 'Poteaux', t: 'prof', d: 'HEA160', list: 'poteauStructure', g: 'Ossature' },
-      { k: 'raf', l: 'Traverses', t: 'prof', d: 'IPE200', list: 'poutre', g: 'Ossature' },
+      { k: 'raf', l: 'Traverses', t: 'prof', d: '__auto', auto: 'traverse', list: 'poutre', g: 'Ossature' },
       { k: 'purlin', l: 'Pannes', t: 'prof', d: 'UPN100', list: 'poutre', g: 'Ossature' },
       { k: 'purlinMax', l: 'Entraxe maxi pannes', t: 'num', d: 1500, u: 'mm', g: 'Ossature' },
       { k: 'brace', l: 'Contreventement (croix)', t: 'prof', d: 'RP16', list: 'barreau', g: 'Ossature' },
       { k: 'snow', l: 'Neige', t: 'num', d: 0.65, u: 'kN/m²', step: 0.05, g: 'Résistance' },
       { k: 'grade', l: 'Nuance', t: 'sel', d: 'S235', o: GRADES, g: 'Résistance' }
-    ],
+    ].concat(masonParams({ mat: 'beton', floor: 'beton-lisse', extra: [] })),
     build: function (p) {
       var m = new Model('Portique ' + p.bays + ' travées ' + p.P), t = Math.tan(p.pente * DEG), col = profile(p.col), raf = profile(p.raf);
       var ridge = p.roof === '2pans' ? p.H + p.P / 2 * t : null, hHigh = p.roof === 'mono' ? p.H + p.P * t : ridge;
@@ -1616,6 +2012,8 @@
       var span = p.roof === '2pans' ? p.P : p.P, q = p.snow * 1e-3 * p.e, gq = (0.15 * 1e-3 * p.e + raf.kgm * 9.81e-3);
       beamChecks(m, 'traverse (approche poutre simple)', raf.id, span, q, gq, p.grade, 200);
       m.value('Emprise', f0(p.bays * p.e) + ' x ' + f0(p.P) + ' mm'); m.value('Faîtage', f0(hHigh) + ' mm');
+      mBox(m, 'Dalle', p.masonMat, -500, -500, p.bays * p.e + 500, p.P + 500, -220, 200); mBox(m, 'Revêtement', p.floorMat, -500, -500, p.bays * p.e + 500, p.P + 500, -20, 20);
+      masonValue(m);
       m.warn('Note de calcul', 'Charpente : neige, vent, stabilité d\'ensemble, assemblages et fondations à justifier par un bureau d\'études (NF EN 1991, NF EN 1993).', N.EC3);
       m.info('Exécution', 'Ouvrage porteur : NF EN 1090-2, EXC2 par défaut.', N.EXE);
       return m;
@@ -1632,14 +2030,15 @@
       { k: 'ext', l: 'Dépassement des montants', t: 'num', d: 1100, u: 'mm', g: 'Dimensions' },
       { k: 'wall', l: 'Dégagement mur / échelon', t: 'num', d: 200, u: 'mm', g: 'Dimensions' },
       { k: 'stile', l: 'Montants', t: 'prof', d: 'PL60x10', list: 'plat', g: 'Échelle' },
-      { k: 'rung', l: 'Échelons', t: 'prof', d: 'TC25x25x2', list: 'echelon', g: 'Échelle' },
+      { k: 'rung', l: 'Échelons', t: 'prof', d: '__auto', auto: 'échelon', list: 'echelon', g: 'Échelle' },
       { k: 'cage', l: 'Crinoline', t: 'bool', d: true, g: 'Crinoline' },
       { k: 'cageStart', l: 'Départ 1er arceau', t: 'num', d: 2500, u: 'mm', g: 'Crinoline', show: ['cage', true] },
       { k: 'hoopMax', l: 'Espacement maxi arceaux', t: 'num', d: 1200, u: 'mm', g: 'Crinoline', show: ['cage', true] },
       { k: 'D', l: 'Diamètre intérieur', t: 'num', d: 700, u: 'mm', g: 'Crinoline', show: ['cage', true] },
       { k: 'barMax', l: 'Espacement maxi filants', t: 'num', d: 280, u: 'mm', g: 'Crinoline', show: ['cage', true] },
       { k: 'hoop', l: 'Arceaux / filants', t: 'prof', d: 'PL40x5', list: 'plat', g: 'Crinoline', show: ['cage', true] }
-    ],
+    ].concat(masonParams({ mat: 'beton', floor: 'beton-lisse', extra: [
+      { k: 'context', l: 'Contexte', t: 'sel', d: 'facade', o: [['facade', 'Façade + toiture-terrasse + acrotère'], ['aucun', 'Aucun']], g: 'Maçonnerie & contexte' }] })),
     build: function (p) {
       var m = new Model('Échelle' + (p.cage ? ' à crinoline' : '') + ' H' + p.climb), st = profile(p.stile), xL = -st.wa / 2, xR = p.W + st.wa / 2, top = p.climb + p.ext;
       m.member('MO', 'Montant', st.id, [xL, 0, 0], [xL, top, 0], { rot: 90 }); m.member('MO', 'Montant', st.id, [xR, 0, 0], [xR, top, 0], { rot: 90 });
@@ -1657,6 +2056,14 @@
         for (k = 1; k <= nf; k++) { var a = a0 + (a1 - a0) * k / (nf + 1); m.member('F', 'Filant', p.hoop, at(a, start), at(a, top)); }
       }
       var ref = p.use === 'batiment' ? N.E85 : N.ISO4;
+      if (p.context === 'facade') {
+        var zw = -p.wall;
+        mBox(m, 'Façade', p.masonMat, -1200, zw - 220, p.W + 1200, zw, -220, p.climb + 300 + 220);
+        mBox(m, 'Toiture-terrasse', 'beton', -1200, zw - 3500, p.W + 1200, zw - 220, p.climb - 250, 250);
+        mBox(m, 'Sol', p.floorMat, -1500, zw, p.W + 1500, 2500, -220, 220);
+        m.info('Acrotère', 'Acrotère de 300 mm représenté : prévoir une crosse / passage sur toiture et un garde-corps en rive si nécessaire.');
+        masonValue(m);
+      }
       m.value('Échelons', n + ' au pas de ' + f1(pitch) + ' mm'); if (p.cage) { m.value('Arceaux', nh + ' à ' + f0(hs) + ' mm'); m.value('Filants', 'espacés de ' + f0(bs) + ' mm'); }
       m.rule(pitch >= 225 && pitch <= 300, 'Pas des échelons', f0(pitch) + ' mm (225–300)', f0(pitch) + ' mm hors 225–300', ref);
       m.rule(p.W >= 400 && p.W <= 600, 'Largeur entre montants', f0(p.W) + ' mm (400–600)', f0(p.W) + ' mm hors 400–600', ref);
@@ -1932,19 +2339,50 @@
     return Object.keys(g).map(function (a) { return { atom: a, items: Object.keys(g[a]).map(function (k) { return { name: k, qty: g[a][k] }; }) }; });
   }
 
+  /**
+   * Dimensionnement automatique : chaque profil réglé sur « Auto » prend le plus léger de sa série qui satisfait
+   * les vérifications de résistance qui le concernent (recherche dichotomique, les autres profils étant fixés).
+   */
+  function solve(id, p) {
+    var f = FAMILIES[id], chosen = [];
+    var vis = function (q) { if (!q.show) return true; var v = p[q.show[0]]; return q.show.slice(1).some(function (x) { return x === v || String(x) === String(v); }); };
+    f.params.forEach(function (q) { if (q.t === 'prof' && p[q.k] === '__auto' && !vis(q)) p[q.k] = autoCandidates(q.list)[Math.floor(autoCandidates(q.list).length / 2)]; });
+    var autos = f.params.filter(function (q) { return q.t === 'prof' && p[q.k] === '__auto'; });
+    var cands = {};
+    autos.forEach(function (q) { cands[q.k] = autoCandidates(q.list); p[q.k] = cands[q.k][cands[q.k].length - 1]; });
+    autos.forEach(function (q) {
+      var c = cands[q.k], re = new RegExp(q.auto || '.', 'i');
+      var okAt = function (i) { p[q.k] = c[i]; try { var mm = f.build(p); return !mm.checks.some(function (ch) { return ch.level === 'fail' && re.test(ch.rule); }); } catch (e) { return false; } };
+      var lo = 0, hi = c.length - 1, best = -1;
+      if (okAt(hi)) { best = hi; while (lo < hi) { var mid = (lo + hi) >> 1; if (okAt(mid)) { best = mid; hi = mid; } else lo = mid + 1; } best = lo; }
+      p[q.k] = c[best >= 0 ? best : c.length - 1]; chosen.push({ k: q.k, label: q.l, id: p[q.k], found: best >= 0 });
+    });
+    var m = f.build(p);
+    chosen.forEach(function (a) {
+      m.value('Auto · ' + a.label, profile(a.id).label);
+      if (!a.found) m.warn('Dimensionnement automatique', a.label + ' : aucun profil de la série ne suffit — choisir une autre famille de profil ou réduire les portées.');
+    });
+    return { m: m, p: p, auto: chosen };
+  }
+
   /** Construit un ouvrage : résultat complet, sérialisable en JSON (lu par SolidWorks). */
   function build(id, input, opt) {
     var f = FAMILIES[id]; if (!f) throw new Error('Ouvrage inconnu : ' + id);
-    var p = coerce(id, input), m = f.build(p), t = totals(m), n = nest(m, opt && opt.nest), c = cost(m, n, opt && opt.cost);
+    var sv = solve(id, coerce(id, input)), p = sv.p, m = sv.m, t = totals(m), n = nest(m, opt && opt.nest), c = cost(m, n, opt && opt.cost);
     var fails = m.checks.filter(function (x) { return x.level === 'fail'; }).length;
     return {
-      engine: 'MetalForge', version: VERSION, family: id, label: f.label, params: p, name: m.name,
-      members: m.members, plates: m.plates, surfaces: m.surfaces, flats: m.flats, checks: m.checks, values: m.values, notes: m.notes,
+      engine: 'MetalForge', version: VERSION, family: id, label: f.label, params: p, name: m.name, auto: sv.auto,
+      members: m.members, plates: m.plates, surfaces: m.surfaces, flats: m.flats, masonry: m.masonry, checks: m.checks, values: m.values, notes: m.notes,
       mass: round(t.mass, 2), paint: round(t.paint, 3), compliant: fails === 0, bom: bom(m), nesting: n, cost: c, composition: composition(m)
     };
   }
   function schema() {
-    return Object.keys(FAMILIES).map(function (k) { var f = FAMILIES[k]; return { id: f.id, cat: f.cat, label: f.label, icon: f.icon, params: f.params }; });
+    return Object.keys(FAMILIES).map(function (k) {
+      var f = FAMILIES[k];
+      return { id: f.id, cat: f.cat, label: f.label, icon: f.icon, params: f.params.map(function (q) {
+        if (q.t !== 'prof') return q;
+        var o = Object.assign({}, q); o.groups = profileOptions(q.list); return o; }) };
+    });
   }
 
   // ------------------------------------------------------------------ exports texte

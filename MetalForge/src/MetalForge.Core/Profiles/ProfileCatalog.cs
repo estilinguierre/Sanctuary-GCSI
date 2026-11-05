@@ -111,8 +111,52 @@ namespace MetalForge.Core.Profiles
                                                       RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         /// <summary>Crée un profilé hors catalogue à partir de son identifiant (sections paramétriques uniquement).</summary>
+        private static readonly Regex SpecialRx = new Regex(@"^(?<p>MCDR|MCBO|MCMO|MCB|MCCU|UV|OV|OB|TRDI|TOR)(?<a>\d+(\.\d+)?)(x(?<b>\d+(\.\d+)?))?(x(?<c>\d+(\.\d+)?))?$",
+                                                            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>Profils spéciaux (mêmes formules que le moteur atomique engine.js).</summary>
+        private static Profile ParseSpecial(string id)
+        {
+            var m = SpecialRx.Match(id);
+            if (!m.Success) return null;
+            double D(string g) => m.Groups[g].Success ? double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture) : 0;
+            string kind = m.Groups["p"].Value.ToUpperInvariant();
+            double a = D("a"), b = D("b"), c = D("c"), area, perim, rho = Profile.SteelDensity, B = a, H = b, T = c;
+            string label;
+            switch (kind)
+            {
+                case "MCDR": case "MCBO": case "MCMO": case "MCB":
+                    if (b <= 0) return null;
+                    double k = kind == "MCDR" ? Math.PI / 4 : kind == "MCBO" ? 0.85 : kind == "MCMO" ? 0.72 : 1;
+                    area = a * b * k; T = b;
+                    perim = kind == "MCDR" ? a + Math.PI * Math.Sqrt((a * a / 4 + b * b) / 2) : 2 * (a + b);
+                    if (kind == "MCB") rho = 550;
+                    label = (kind == "MCDR" ? "Main courante demi-ronde " : kind == "MCBO" ? "Main courante bombée " : kind == "MCMO" ? "Main courante moulurée " : "Main courante bois ") + F(a) + "x" + F(b);
+                    break;
+                case "TRDI":
+                    if (b <= 0) return null;
+                    area = Math.PI * (a - b) * b; perim = Math.PI * a; H = a; T = b; rho = 7900; label = "Tube inox Ø" + F(a) + "x" + F(b); break;
+                case "TOR":
+                    area = a * a; perim = 4 * a; H = a; T = a; label = "Carré torsadé " + F(a); break;
+                default: // MCCU, UV, OV, OB : B x H x t
+                    if (c <= 0) return null;
+                    if (kind == "OV") { double r1 = a / 2, r2 = b / 2; area = Math.PI * (3 * (r1 + r2) - Math.Sqrt((3 * r1 + r2) * (r1 + 3 * r2))) * c; perim = area / c; }
+                    else if (kind == "OB") { area = (2 * (a - b) + Math.PI * b) * c; perim = 2 * (a + b); }
+                    else { area = c * (a + 2 * (b - c)); perim = 2 * (a + b); }
+                    label = (kind == "MCCU" ? "Main courante creuse " : kind == "UV" ? "Profil U (lisse sur verre) " : kind == "OV" ? "Tube ovale " : "Tube oblong ") + F(a) + "x" + F(b) + "x" + F(c);
+                    break;
+            }
+            return new Profile
+            {
+                Id = id.ToUpperInvariant(), Family = ProfileFamily.Special, B = B, H = H, T = T, SpecialLabel = label, SpecialArea = area, SpecialPerimeter = perim,
+                TabulatedMassPerMeter = area * 1e-6 * rho
+            };
+        }
+
         private static Profile Parse(string id)
         {
+            var sp = ParseSpecial(id);
+            if (sp != null) return sp;
             var m = Num.Match(id);
             if (!m.Success) return null;
             double D(string g) => m.Groups[g].Success ? double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture) : 0;
