@@ -4,3 +4,6 @@ obj/
 *.user
 *.suo
 TestResults/
+# Références internes MétalCad : jamais dans le dépôt (voir CLAUDE.md)
+captures/
+sources/

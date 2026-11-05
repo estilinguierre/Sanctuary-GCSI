@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Maquette minimale de l'API SolidWorks : UNIQUEMENT pour compiler sans SolidWorks (CI, Linux). -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <IsPackable>false</IsPackable>
+      <Platforms>x64</Platforms>
+  </PropertyGroup>
+</Project>

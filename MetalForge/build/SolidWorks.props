@@ -1,0 +1,24 @@
+<Project>
+  <!--
+    Références à l'API SolidWorks (interop). Sur un poste avec SolidWorks, les DLL sont lues dans :
+      $(SolidWorksDir)\api\redist   (modifiable : dotnet build -p:SolidWorksDir="D:\SOLIDWORKS")
+    Sans SolidWorks (intégration continue, Linux), une maquette de l'API est utilisée pour vérifier la compilation :
+    la DLL produite ne doit PAS être enregistrée dans SolidWorks.
+  -->
+  <PropertyGroup>
+    <SolidWorksDir Condition="'$(SolidWorksDir)' == ''">C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS</SolidWorksDir>
+    <SolidWorksRedist>$(SolidWorksDir)\api\redist</SolidWorksRedist>
+    <AvecSolidWorks Condition="Exists('$(SolidWorksRedist)\SolidWorks.Interop.sldworks.dll')">true</AvecSolidWorks>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(AvecSolidWorks)' == 'true'">
+    <Reference Include="SolidWorks.Interop.sldworks"><HintPath>$(SolidWorksRedist)\SolidWorks.Interop.sldworks.dll</HintPath><EmbedInteropTypes>false</EmbedInteropTypes><Private>false</Private></Reference>
+    <Reference Include="SolidWorks.Interop.swconst"><HintPath>$(SolidWorksRedist)\SolidWorks.Interop.swconst.dll</HintPath><EmbedInteropTypes>false</EmbedInteropTypes><Private>false</Private></Reference>
+    <Reference Include="SolidWorks.Interop.swpublished"><HintPath>$(SolidWorksRedist)\SolidWorks.Interop.swpublished.dll</HintPath><EmbedInteropTypes>false</EmbedInteropTypes><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(AvecSolidWorks)' != 'true'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\tools\MetalForge.SwStubs\MetalForge.SwStubs.csproj" />
+  </ItemGroup>
+  <Target Name="AvertirMaquetteSolidWorks" BeforeTargets="Build" Condition="'$(AvecSolidWorks)' != 'true'">
+    <Warning Text="SolidWorks introuvable ($(SolidWorksRedist)) : compilation contre la maquette d'API. Ne pas enregistrer cette DLL dans SolidWorks." />
+  </Target>
+</Project>

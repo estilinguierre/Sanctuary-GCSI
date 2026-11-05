@@ -1,0 +1,16 @@
+<Project>
+  <!-- Réglages communs à tous les projets MetalForge. -->
+  <PropertyGroup>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>0.1.0</Version>
+    <Company>MetalForge</Company>
+    <Product>MetalForge — complément SolidWorks pour la métallerie</Product>
+    <Copyright>MetalForge</Copyright>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <!-- Compilation .NET Framework 4.8 possible sans Visual Studio (assemblies de référence). -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

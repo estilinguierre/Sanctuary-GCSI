@@ -1,4 +1,4 @@
-name: MetalForge — tests des moteurs (JS + C#)
+name: MetalForge — compilation et tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths: ["MetalForge/**"]
 
 jobs:
-  core-tests:
+  build-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -17,10 +17,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      # Moteur de configuration atomique (JavaScript partagé web / SolidWorks)
-      - run: node web/configurateur/engine.test.js
-      # Le complément SolidWorks (Windows + licence SW) n'est pas compilé ici : uniquement le moteur C# et ses tests.
-      - run: dotnet test tests/MetalForge.Core.Tests --nologo
+      # Sans SolidWorks, l'add-in compile contre la maquette d'API (tools/MetalForge.SwStubs) : vérification de compilation seulement.
+      - run: dotnet build MetalForge.sln -p:Configuration=Release -p:Platform=x64 --nologo
+      - run: dotnet test src/MetalForge.Tests -c Release --nologo

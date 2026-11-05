@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Bibliothèque : profils normalisés, RAL, motifs, platines, modèles (album). Rempli à partir du lot L1. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>MetalForge.Library</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalForge.Core\MetalForge.Core.csproj" />
+  </ItemGroup>
+</Project>

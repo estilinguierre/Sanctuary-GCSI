@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Exports : DXF (netDxf), SVG, XLSX (ClosedXML), PDF à l'échelle (PDFsharp).
+    net48 : utilisé par le complément SolidWorks ; net8.0 : utilisé par les tests.
+    (netDxf n'est pas publié en .NET Standard.)
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
+    <RootNamespace>MetalForge.Export</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MetalForge.Core\MetalForge.Core.csproj" />
+    <PackageReference Include="netDxf" Version="2023.11.10" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+  </ItemGroup>
+</Project>
