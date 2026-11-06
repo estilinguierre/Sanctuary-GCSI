@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbite — Second cerveau</title>
+<meta name="description" content="Second cerveau souverain : notes liées (Obsidian), révision espacée (Anki), questions sur sources (NotebookLM) et IA (Claude, ChatGPT ou modèle local), sur une carte planétaire.">
+<style>
+:root{
+  --bg:#070b18; --bg2:#0c1328; --panel:rgba(14,20,42,.92); --line:rgba(120,170,255,.18);
+  --txt:#e8ecff; --mute:#8d97bf; --cyan:#7fd4ff; --pink:#ff4f86; --violet:#a46bff; --ok:#3ee6a8; --warn:#ffb547;
+  --r:14px; --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font:14px/1.45 var(--font);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+#cv{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+
+/* ---- barre du haut ---- */
+#top{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;
+  padding:6px 8px;border:1px solid var(--line);border-radius:16px;background:rgba(10,15,34,.72);backdrop-filter:blur(14px);
+  max-width:calc(100% - 24px);overflow-x:auto;scrollbar-width:none;z-index:5}
+#top::-webkit-scrollbar{display:none}
+.tb{border:0;background:transparent;padding:7px 10px;border-radius:10px;font-weight:650;font-size:12.5px;letter-spacing:.02em;white-space:nowrap;color:#cfd7ff}
+.tb:hover{background:rgba(127,212,255,.08)}
+.tb.on{background:rgba(127,212,255,.14);color:#fff}
+.tb.ghost{color:var(--mute);font-weight:600}
+.pill{display:flex;align-items:center;gap:7px;border:1px solid rgba(255,79,134,.55);border-radius:999px;padding:6px 12px}
+.pill i{width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff}
+.pill b{font-weight:800}
+.sep{width:1px;height:20px;background:var(--line);flex:none}
+.badge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--pink);color:#fff;font-size:11px;font-weight:800;margin-right:5px}
+.badge.zero{background:rgba(255,255,255,.12);color:var(--mute)}
+
+/* ---- orbe IA ---- */
+#orb{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);width:62px;height:62px;border:0;padding:0;background:none;z-index:5}
+#orb .s{position:absolute;inset:0;clip-path:polygon(50% 0,61% 13%,78% 8%,80% 25%,96% 30%,88% 46%,100% 58%,84% 66%,86% 84%,68% 83%,58% 100%,46% 87%,30% 97%,26% 80%,8% 78%,14% 62%,0 48%,15% 38%,10% 21%,28% 20%,34% 3%);
+  background:radial-gradient(circle at 50% 45%,#fff 0 18%,#e98bff 30%,#9f5bff 60%,#5d2bd6 100%);animation:pulse 3.2s ease-in-out infinite;filter:drop-shadow(0 0 18px #b06bff)}
+#orb .t{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:15px solid #ff3d8b;filter:drop-shadow(0 0 4px #ff3d8b)}
+@keyframes pulse{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.07) rotate(8deg)}}
+
+/* ---- barre du bas ---- */
+#bottom{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);background:linear-gradient(transparent,rgba(5,8,18,.9));font-size:12px;color:var(--mute);z-index:4}
+#bottom b{color:#cfd7ff;font-weight:650}
+#hint{position:fixed;left:16px;bottom:48px;font-size:12px;color:var(--mute);z-index:3;pointer-events:none;max-width:60vw}
+
+/* ---- tiroir ---- */
+#drawer{position:fixed;top:68px;right:12px;bottom:110px;width:min(440px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r);backdrop-filter:blur(18px);display:flex;flex-direction:column;transform:translateX(calc(100% + 24px));transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:6;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#drawer.open{transform:none}
+@media (max-width:720px){
+  #drawer{top:auto;left:0;right:0;bottom:0;width:100%;height:78vh;border-radius:18px 18px 0 0;transform:translateY(105%)}
+  #drawer.open{transform:none}
+  #hint{display:none}
+}
+.tabs{display:flex;gap:2px;padding:8px;border-bottom:1px solid var(--line);align-items:center}
+.tab{flex:1;border:0;background:transparent;padding:8px 4px;border-radius:9px;color:var(--mute);font-weight:650;font-size:12.5px}
+.tab.on{background:rgba(127,212,255,.12);color:#fff}
+.x{border:0;background:transparent;color:var(--mute);font-size:20px;width:32px;height:32px;border-radius:8px}
+.x:hover{background:rgba(255,255,255,.06);color:#fff}
+.pane{flex:1;overflow:auto;padding:14px;display:none}
+.pane.on{display:block}
+.pane.flex{flex-direction:column}
+.pane.flex.on{display:flex}
+h3{margin:0 0 10px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.04);padding:7px 11px;border-radius:9px;font-weight:600;font-size:12.5px}
+.btn:hover{border-color:rgba(127,212,255,.5)}
+.btn.pri{background:linear-gradient(135deg,#7c4dff,#ff4f86);border:0;color:#fff}
+.btn.sm{padding:5px 8px;font-size:12px}
+.btn.danger{color:#ff8a9f}
+.in{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:9px;padding:9px 11px;outline:none}
+.in:focus{border-color:rgba(127,212,255,.6)}
+textarea.in{resize:vertical;min-height:240px;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}
+.title-in{font-size:18px;font-weight:750;background:transparent;border:0;padding:4px 0;width:100%;outline:none}
+.list{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.li{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:9px;cursor:pointer}
+.li:hover{background:rgba(255,255,255,.05)}
+.li small{color:var(--mute);white-space:nowrap}
+.muted{color:var(--mute)}
+.md{line-height:1.6}
+.md h1,.md h2,.md h3{text-transform:none;letter-spacing:0;color:#fff;margin:14px 0 6px}
+.md h1{font-size:20px}.md h2{font-size:16px}.md h3{font-size:14px}
+.md code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:5px;font-size:12.5px}
+.md pre{background:rgba(0,0,0,.35);padding:10px;border-radius:9px;overflow:auto}
+.md blockquote{margin:6px 0;padding:4px 12px;border-left:3px solid var(--violet);color:#c8c0ff}
+.md ul{padding-left:20px;margin:6px 0}
+.wl{color:var(--cyan);text-decoration:none;border-bottom:1px dashed rgba(127,212,255,.5);cursor:pointer}
+.wl.miss{color:#ff8a9f;border-color:rgba(255,138,159,.5)}
+.tag{color:var(--violet);font-weight:600}
+.qa{border:1px solid rgba(255,79,134,.35);background:rgba(255,79,134,.06);border-radius:9px;padding:7px 10px;margin:6px 0}
+.qa b{color:var(--pink);font-size:11px;letter-spacing:.06em;margin-right:6px}
+.box{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.03)}
+.card{border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center;min-height:170px;display:flex;flex-direction:column;justify-content:center;gap:12px;background:radial-gradient(circle at 50% 0,rgba(164,107,255,.12),transparent 70%)}
+.card .q{font-size:18px;font-weight:700}
+.card .a{font-size:16px;color:var(--cyan)}
+.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.grades button{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:10px;padding:8px 2px;font-weight:700}
+.grades button small{display:block;font-weight:500;color:var(--mute);font-size:11px}
+.g0{color:#ff7a8a}.g1{color:var(--warn)}.g2{color:var(--ok)}.g3{color:var(--cyan)}
+.goal{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.goal input[type=checkbox]{width:20px;height:20px;accent-color:var(--pink)}
+.goal.done .in{text-decoration:line-through;color:var(--mute)}
+.msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:10px}
+.msg{padding:10px 12px;border-radius:12px;max-width:94%}
+.msg.u{align-self:flex-end;background:rgba(124,77,255,.25)}
+.msg.a{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.msg.e{background:rgba(255,79,134,.12);border:1px solid rgba(255,79,134,.4)}
+.composer{display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--line)}
+.composer textarea{min-height:44px;height:44px;resize:none;font-family:var(--font)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;font-size:12.5px;font-weight:650;color:var(--mute)}
+.seg button.on{background:rgba(127,212,255,.14);color:#fff}
+.srcs{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px;margin:8px 0}
+.srcs label{display:flex;gap:8px;align-items:center;padding:3px 4px;font-size:13px}
+.lbl{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%) translateY(-20px);opacity:0;transition:.25s;background:#151d3d;border:1px solid var(--line);padding:8px 14px;border-radius:10px;z-index:20;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--mute);border-top-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<nav id="top">
+  <button class="tb" id="bSettings" title="Réglages">✱</button>
+  <button class="tb" id="bZoom" title="Vue d'ensemble">ZOOM FAR</button>
+  <button class="tb ghost" id="bDues" title="Cartes à réviser"><span class="badge zero" id="dueN">0</span>dues</button>
+  <button class="tb pill" id="bGoals"><i></i><span><b id="goalN">3</b> objectifs du jour</span> →</button>
+  <span class="sep"></span>
+  <button class="tb" id="bMode" title="Disposition orbitale ou libre">Planetary</button>
+  <button class="tb" id="bLinks" title="Afficher tous les liens">Tous les liens</button>
+  <button class="tb" id="bLock" title="Figer les positions">Verrouiller</button>
+  <span class="sep"></span>
+  <button class="tb" id="bNotes" title="Notes">▤</button>
+  <button class="tb" id="bNew" title="Nouvelle note">＋</button>
+</nav>
+
+<div id="hint">Glisser : déplacer · Molette / pincer : zoom · Clic : ouvrir une note · Double-clic dans le vide : nouvelle note</div>
+<button id="orb" title="Assistant IA"><span class="s"></span><span class="t"></span></button>
+<footer id="bottom"><span id="stats">—</span><span><b id="modelLbl">—</b></span><span id="saveLbl">local · souverain</span></footer>
+
+<aside id="drawer">
+  <div class="tabs">
+    <button class="tab" data-tab="notes">Notes</button>
+    <button class="tab" data-tab="review">Révision</button>
+    <button class="tab" data-tab="goals">Objectifs</button>
+    <button class="tab" data-tab="ai">IA</button>
+    <button class="tab" data-tab="settings">✱</button>
+    <button class="x" id="close" title="Fermer">×</button>
+  </div>
+  <section class="pane" id="p-notes"></section>
+  <section class="pane" id="p-review"></section>
+  <section class="pane" id="p-goals"></section>
+  <section class="pane flex" id="p-ai"></section>
+  <section class="pane" id="p-settings"></section>
+</aside>
+<div id="toast"></div>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<input type="file" id="fileMd" accept=".md,.markdown,.txt" multiple hidden>
+<input type="file" id="fileDir" webkitdirectory multiple hidden>
+
+<script>
+'use strict';
+/* =====================================================================
+   ORBITE — second cerveau souverain
+   Obsidian (notes + [[liens]] + #tags) · Anki (Q :: R, SM-2)
+   NotebookLM (questions sur sources choisies) · IA (Claude / OpenAI-compatible)
+   Toutes les données restent dans le navigateur (localStorage).
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const KEY = 'orbite.v1';
+const DAY = 864e5;
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const today = () => new Date().toISOString().slice(0, 10);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hash = s => { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+
+/* ---------------- données de démonstration ---------------- */
+function seed() {
+  const N = (title, body) => ({ id: uid(), title, body, created: Date.now(), updated: Date.now() });
+  const notes = [
+    N('Robert Greene', '#greene\nAuteur sur le pouvoir, la stratégie et la maîtrise.\n\n- [[Les 48 lois du pouvoir]]\n- [[Mastery]]\n- [[Les lois de la nature humaine]]'),
+    N('Les 48 lois du pouvoir', '#greene/pouvoir\nRecueil de lois tirées de l\'histoire.\n\nLoi 1 : ne jamais surpasser le maître.\nLien avec [[Antifragile]] : l\'exposition contrôlée au désordre.\n\nQuelle est la loi n°1 du pouvoir ? :: Ne jamais surpasser le maître\nLoi n°4 ? :: Toujours en dire moins que nécessaire'),
+    N('Loi 15 — écraser l\'ennemi', '#greene/pouvoir\nUne victoire partielle laisse une menace. Voir [[Les 48 lois du pouvoir]].'),
+    N('Mastery', '#greene/maitrise\nTrois phases : apprentissage, créatif-actif, maîtrise.\nVoir [[Apprentissage profond]] et [[Répétition espacée]].\n\nCombien de phases vers la maîtrise selon Greene ? :: Trois : apprentissage, créatif-actif, maîtrise'),
+    N('Apprentissage profond', '#greene/maitrise\nL\'apprentissage (apprenticeship) dure 5 à 10 ans. Se relie à [[Second cerveau]].'),
+    N('Les lois de la nature humaine', '#greene/nature\nComprendre l\'irrationnel, l\'envie, la grandiosité.\nRésonne avec [[La psychologie de l\'argent]].'),
+    N('Économie', '#economie\nCarte d\'entrée économie.\n- [[Inflation]]\n- [[Intérêts composés]]\n- [[Cygne noir]]'),
+    N('Inflation', '#economie/monnaie\nHausse générale des prix ; érosion du pouvoir d\'achat.\n\nDéfinition de l\'inflation ? :: Hausse générale et durable des prix'),
+    N('Masse monétaire', '#economie/monnaie\nM1, M2, M3. Lien avec [[Inflation]].'),
+    N('Intérêts composés', '#economie/finance\nLa croissance exponentielle du capital. Pilier de [[La psychologie de l\'argent]].\n\nFormule des intérêts composés ? :: C × (1 + r)^n'),
+    N('Cycle économique', '#economie/macro\nExpansion, pic, récession, creux.'),
+    N('Morgan Housel', '#housel\nAuteur de [[La psychologie de l\'argent]].'),
+    N('La psychologie de l\'argent', '#housel\nLe comportement compte plus que l\'intelligence financière.\n- Assez = savoir s\'arrêter\n- La chance et le risque sont frères\n- [[Intérêts composés]]\n\nSelon Housel, qu\'est-ce qui compte le plus en finance ? :: Le comportement, plus que l\'intelligence'),
+    N('La marge de sécurité', '#housel/risque\nLaisser de la place à l\'erreur. Rejoint [[Antifragile]].'),
+    N('Antifragile', '#taleb\nCe qui gagne au désordre. Opposé à fragile ; au-delà du robuste.\nVoir [[Cygne noir]], [[Skin in the game]].\n\nQue signifie antifragile ? :: Qui se renforce sous l\'effet du stress et du désordre'),
+    N('Cygne noir', '#taleb\nÉvénement rare, à fort impact, rationalisé après coup.\n\nTrois traits d\'un cygne noir ? :: Rare, impact extrême, prévisibilité rétrospective'),
+    N('Skin in the game', '#taleb/ethique\nNe jamais faire confiance à qui ne paie pas ses erreurs.'),
+    N('Stratégie haltère', '#taleb/risque\n90 % très sûr + 10 % très risqué.'),
+    N('Second cerveau', '#pkm/methode\nCapturer, organiser, distiller, exprimer (CODE).\nOutils : [[Zettelkasten]], [[Répétition espacée]], [[LLM Wiki]].\n\nQue signifie CODE ? :: Capturer, Organiser, Distiller, Exprimer'),
+    N('Zettelkasten', '#pkm/methode\nNotes atomiques reliées entre elles. Une idée = une note.'),
+    N('Répétition espacée', '#pkm/memoire\nRevoir juste avant l\'oubli. Algorithme SM-2 (Anki).\n\nQui a créé l\'algorithme SM-2 ? :: Piotr Woźniak (SuperMemo)'),
+    N('LLM Wiki', '#pkm/llm\nUtiliser un LLM pour interroger son propre corpus, avec citations des sources (façon NotebookLM).\nVoir [[Second cerveau]].'),
+    N('RAG', '#pkm/llm\nRetrieval-Augmented Generation : on fournit des sources au modèle pour ancrer ses réponses.'),
+    N('Idée en vrac : cyberdeck', 'Boîtier imprimé 3D pour un Raspberry Pi 5 et un écran 7 pouces. Note encore à relier.'),
+    N('Citation : Sénèque', '« Ce n\'est pas que nous ayons peu de temps, c\'est que nous en perdons beaucoup. »')
+  ];
+  return {
+    notes, cards: {}, pins: {}, chat: [],
+    goals: { date: today(), items: [{ text: 'Réviser les cartes dues', done: false }, { text: 'Relier 2 notes isolées', done: false }, { text: 'Lire 20 pages', done: false }] },
+    settings: { provider: 'anthropic', apiKey: '', model: 'claude-opus-5-5', baseUrl: 'https://api.openai.com/v1', oaModel: 'gpt-4o', mode: 'planetary', allLinks: false, locked: false }
+  };
+}
+
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch { S = null; }
+if (!S || !Array.isArray(S.notes)) S = seed();
+S.settings = Object.assign(seed().settings, S.settings || {});
+S.cards ||= {}; S.pins ||= {}; S.chat ||= [];
+let saveT;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); $('#saveLbl').textContent = 'enregistré localement'; }
+    catch { $('#saveLbl').textContent = '⚠ stockage indisponible'; }
+  }, 300);
+}
+
+/* ---------------- analyse des notes ---------------- */
+const RX_LINK = /\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g;
+const RX_TAG = /(^|\s)#([\p{L}\p{N}_\-\/]+)/gu;
+const RX_CARD = /^(?!\s*[-*>#])(.+?)\s*::\s*(.+)$/;
+function parse(n) {
+  const links = [...n.body.matchAll(RX_LINK)].map(m => m[1].trim());
+  const tags = [...n.body.matchAll(RX_TAG)].map(m => m[2].toLowerCase());
+  const cards = [];
+  for (const line of n.body.split('\n')) {
+    const m = line.match(RX_CARD);
+    if (m) cards.push({ id: n.id + ':' + hash(m[1].trim()), q: m[1].trim(), a: m[2].trim(), note: n.id });
+  }
+  return { links, tags, cards };
+}
+
+let IDX = { byId: new Map(), byTitle: new Map(), out: new Map(), inn: new Map(), edges: [], systems: [], cards: [] };
+function rebuild() {
+  const byId = new Map(), byTitle = new Map(), out = new Map(), inn = new Map();
+  for (const n of S.notes) { n._p = parse(n); byId.set(n.id, n); byTitle.set(n.title.toLowerCase(), n); out.set(n.id, new Set()); inn.set(n.id, new Set()); }
+  const edges = [], seen = new Set();
+  for (const n of S.notes) for (const t of n._p.links) {
+    const m = byTitle.get(t.toLowerCase());
+    if (!m || m.id === n.id) continue;
+    out.get(n.id).add(m.id); inn.get(m.id).add(n.id);
+    const k = n.id < m.id ? n.id + '|' + m.id : m.id + '|' + n.id;
+    if (!seen.has(k)) { seen.add(k); edges.push([n.id, m.id]); }
+  }
+  // systèmes (planètes) = racine du 1er tag ; îlots = tag complet
+  const sys = new Map();
+  for (const n of S.notes) {
+    const t = n._p.tags[0];
+    const root = t ? t.split('/')[0] : '∅';
+    const ilot = t || '∅';
+    if (!sys.has(root)) sys.set(root, { key: root, notes: [], ilots: new Map() });
+    const s = sys.get(root); s.notes.push(n);
+    if (!s.ilots.has(ilot)) s.ilots.set(ilot, []);
+    s.ilots.get(ilot).push(n);
+  }
+  const systems = [...sys.values()].sort((a, b) => b.notes.length - a.notes.length);
+  for (const s of systems) {
+    // nom lisible : titre de la note "hub" (la plus liée) qui porte exactement le tag racine, sinon le tag
+    const hub = s.notes.filter(n => n._p.tags[0] === s.key).sort((a, b) => a.created - b.created || deg(b) - deg(a))[0];
+    s.name = s.key === '∅' ? 'À classer' : (hub ? hub.title : '#' + s.key);
+    s.orphans = s.notes.filter(n => out.get(n.id).size + inn.get(n.id).size === 0).length;
+  }
+  function deg(n) { return out.get(n.id).size + inn.get(n.id).size; }
+  const cards = S.notes.flatMap(n => n._p.cards);
+  for (const c of cards) if (!S.cards[c.id]) S.cards[c.id] = { ease: 2.5, ivl: 0, reps: 0, lapses: 0, due: Date.now() };
+  IDX = { byId, byTitle, out, inn, edges, systems, cards };
+  layout();
+  refreshChrome();
+}
+const degree = id => (IDX.out.get(id)?.size || 0) + (IDX.inn.get(id)?.size || 0);
+const dueCards = () => IDX.cards.filter(c => (S.cards[c.id]?.due ?? 0) <= Date.now());
+
+/* ---------------- disposition planétaire ---------------- */
+let nodes = new Map(); // id -> {x,y,tx,ty,vx,vy,sys,ilot}
+let SYS = [];          // {cx,cy,r,name,...}
+let ILOTS = [];        // {cx,cy,r}
+let WORLD_R = 600;
+function layout() {
+  const old = nodes; nodes = new Map(); SYS = []; ILOTS = [];
+  const systems = IDX.systems;
+  // 1) rayon de chaque système (phyllotaxie par îlot)
+  const plan = systems.map(s => {
+    const ilots = [...s.ilots.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, ns]) => ({ k, ns, r: 14 + 11 * Math.sqrt(ns.length) }));
+    let R;
+    if (ilots.length === 1) R = ilots[0].r + 18;
+    else {
+      const ring = Math.max(ilots[0].r + 20, ilots.reduce((a, i) => a + i.r * 2.3, 0) / (2 * Math.PI));
+      R = ring + Math.max(...ilots.map(i => i.r)) + 22;
+      ilots.forEach((il, i) => { const a = i / ilots.length * Math.PI * 2 - Math.PI / 2; il.ox = Math.cos(a) * ring; il.oy = Math.sin(a) * ring; });
+    }
+    ilots.forEach(il => { il.ox ||= 0; il.oy ||= 0; });
+    return { s, ilots, R };
+  });
+  // 2) placement des systèmes : le plus gros au centre si "À classer" ; les autres sur un anneau
+  const inbox = plan.find(p => p.s.key === '∅');
+  const ringed = plan.filter(p => p !== inbox);
+  const coreR = inbox ? inbox.R : 0;
+  const circ = ringed.reduce((a, p) => a + p.R * 2 + 40, 0);
+  const ringR = Math.max(coreR + 60 + (ringed[0]?.R || 0), circ / (2 * Math.PI), 180);
+  let acc = 0;
+  const place = (p, cx, cy) => {
+    SYS.push({ cx, cy, r: p.R, name: p.s.name, n: p.s.notes.length, ilots: p.s.ilots.size, orphans: p.s.orphans, key: p.s.key });
+    for (const il of p.ilots) {
+      const icx = cx + il.ox, icy = cy + il.oy;
+      if (p.ilots.length > 1) ILOTS.push({ cx: icx, cy: icy, r: il.r + 6, key: il.k });
+      il.ns.sort((a, b) => degree(b.id) - degree(a.id)).forEach((n, k) => {
+        const rr = 10 * Math.sqrt(k + 0.4), an = k * 2.39996;
+        let tx = icx + Math.cos(an) * rr, ty = icy + Math.sin(an) * rr;
+        if (S.pins[n.id]) ({ x: tx, y: ty } = S.pins[n.id]);
+        const o = old.get(n.id);
+        nodes.set(n.id, { id: n.id, tx, ty, x: o ? o.x : tx * 0.2, y: o ? o.y : ty * 0.2, vx: 0, vy: 0, sys: p.s.key });
+      });
+    }
+  };
+  if (inbox) place(inbox, 0, 0);
+  ringed.forEach(p => {
+    const a = (acc + p.R + 20) / circ * Math.PI * 2 - Math.PI / 2;
+    acc += p.R * 2 + 40;
+    place(p, Math.cos(a) * ringR, Math.sin(a) * ringR);
+  });
+  WORLD_R = Math.max(240, ...SYS.map(s => Math.hypot(s.cx, s.cy) + s.r)) + 50;
+  RING_R = ringR;
+  alpha = 1;
+}
+let RING_R = 300, alpha = 1;
+
+/* ---------------- simulation libre (force) ---------------- */
+function stepForce() {
+  if (alpha < 0.005) return;
+  const arr = [...nodes.values()];
+  for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) {
+    const a = arr[i], b = arr[j]; let dx = b.x - a.x, dy = b.y - a.y; let d2 = dx * dx + dy * dy || 0.01;
+    if (d2 > 90000) continue;
+    const f = 900 / d2 * alpha; const d = Math.sqrt(d2); dx /= d; dy /= d;
+    a.vx -= dx * f; a.vy -= dy * f; b.vx += dx * f; b.vy += dy * f;
+  }
+  for (const [u, v] of IDX.edges) {
+    const a = nodes.get(u), b = nodes.get(v); if (!a || !b) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - 60) * 0.02 * alpha;
+    a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f;
+  }
+  for (const n of arr) {
+    n.vx += (n.tx - n.x) * 0.004 * alpha; n.vy += (n.ty - n.y) * 0.004 * alpha; // mémoire de l'orbite
+    if (drag && drag.node === n) continue;
+    n.x += n.vx; n.y += n.vy; n.vx *= 0.6; n.vy *= 0.6;
+  }
+  alpha *= 0.985;
+}
+function stepPlanet() {
+  for (const n of nodes.values()) { if (drag && drag.node === n) continue; n.x += (n.tx - n.x) * 0.12; n.y += (n.ty - n.y) * 0.12; }
+}
+
+/* ---------------- rendu canvas ---------------- */
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const cam = { x: 0, y: 0, k: 1 }, camT = { x: 0, y: 0, k: 1 };
+let hover = null, selected = null, zoomFar = false, prevCam = null;
+const stars = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.2, p: Math.random() * 6 }));
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+const sx = x => (x - cam.x) * cam.k + W / 2;
+const sy = y => (y - cam.y) * cam.k + H / 2 - 10;
+const wx = X => (X - W / 2) / cam.k + cam.x;
+const wy = Y => (Y - H / 2 + 10) / cam.k + cam.y;
+function fitK() { return Math.min(W, H - 150) / (WORLD_R * 2.05); }
+const HUES = [338, 196, 268, 160, 30, 220, 300, 90];
+function sysHue(key) { const i = SYS.findIndex(s => s.key === key); return key === '∅' ? 0 : HUES[i % HUES.length]; }
+
+function draw(t) {
+  if (S.settings.mode === 'free' && !S.settings.locked) stepForce(); else if (!S.settings.locked || !drag) stepPlanet();
+  for (const k of ['x', 'y', 'k']) cam[k] += (camT[k] - cam[k]) * 0.15;
+  ctx.fillStyle = '#070b18'; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+  g.addColorStop(0, 'rgba(40,52,110,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const s of stars) { ctx.globalAlpha = 0.25 + 0.35 * Math.sin(t / 900 + s.p) ** 2; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  const k = cam.k, ox = sx(0), oy = sy(0);
+
+  // anneaux
+  ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(127,212,255,.38)';
+  ctx.beginPath(); ctx.arc(ox, oy, WORLD_R * k, 0, 7); ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(127,212,255,.13)';
+  ctx.beginPath(); ctx.arc(ox, oy, RING_R * k, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ox, oy, RING_R * 0.45 * k, 0, 7); ctx.stroke();
+  // faisceaux vers les systèmes
+  for (const s of SYS) {
+    if (s.key === '∅') continue;
+    const gg = ctx.createLinearGradient(ox, oy, sx(s.cx), sy(s.cy));
+    gg.addColorStop(0, 'rgba(127,212,255,.0)'); gg.addColorStop(1, 'rgba(127,212,255,.35)');
+    ctx.strokeStyle = gg; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(sx(s.cx), sy(s.cy)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(127,212,255,.22)'; ctx.beginPath(); ctx.arc(sx(s.cx), sy(s.cy), s.r * k, 0, 7); ctx.stroke();
+  }
+  // îlots
+  ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(255,255,255,.22)';
+  for (const il of ILOTS) { ctx.beginPath(); ctx.ellipse(sx(il.cx), sy(il.cy), il.r * k, il.r * k * 0.82, 0.4, 0, 7); ctx.stroke(); }
+  ctx.setLineDash([]);
+
+  // liens
+  const focus = hover || selected;
+  const nb = focus ? new Set([...(IDX.out.get(focus) || []), ...(IDX.inn.get(focus) || [])]) : null;
+  for (const [u, v] of IDX.edges) {
+    const a = nodes.get(u), b = nodes.get(v); if (!a || !b) continue;
+    const hot = focus && (u === focus || v === focus);
+    if (!S.settings.allLinks && !hot && a.sys !== b.sys) continue;
+    ctx.strokeStyle = hot ? 'rgba(255,79,134,.95)' : S.settings.allLinks ? 'rgba(255,79,134,.38)' : 'rgba(255,79,134,.16)';
+    ctx.lineWidth = hot ? 1.6 : 1;
+    ctx.beginPath(); ctx.moveTo(sx(a.x), sy(a.y));
+    if (a.sys !== b.sys) ctx.quadraticCurveTo(sx((a.x + b.x) * 0.3), sy((a.y + b.y) * 0.3), sx(b.x), sy(b.y)); else ctx.lineTo(sx(b.x), sy(b.y));
+    ctx.stroke();
+  }
+  // noeuds
+  for (const n of nodes.values()) {
+    const d = degree(n.id), r = Math.max(1.6, (2 + Math.sqrt(d) * 1.4) * Math.min(1.6, Math.sqrt(k)));
+    const X = sx(n.x), Y = sy(n.y);
+    if (X < -20 || Y < -20 || X > W + 20 || Y > H + 20) continue;
+    const dim = focus && n.id !== focus && !nb.has(n.id);
+    const h = sysHue(n.sys);
+    ctx.globalAlpha = dim ? 0.3 : 1;
+    ctx.fillStyle = d === 0 ? '#ffffff' : n.sys === '∅' ? '#d8defa' : `hsl(${h} 90% 76%)`;
+    if (n.id === focus) { ctx.shadowColor = '#ff4f86'; ctx.shadowBlur = 16; }
+    ctx.beginPath(); ctx.arc(X, Y, n.id === focus ? r + 2.5 : r, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    if (d === 0) { ctx.strokeStyle = 'rgba(255,181,71,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(X, Y, r + 3, 0, 7); ctx.stroke(); }
+  }
+  ctx.globalAlpha = 1;
+  // étiquettes de notes
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const n of nodes.values()) {
+    const show = n.id === focus || (nb && nb.has(n.id)) || k > 1.5;
+    if (!show) continue;
+    const note = IDX.byId.get(n.id); if (!note) continue;
+    ctx.font = (n.id === focus ? '700 ' : '500 ') + '11.5px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillStyle = n.id === focus ? '#fff' : 'rgba(220,228,255,.82)';
+    ctx.fillText(note.title.length > 34 ? note.title.slice(0, 32) + '…' : note.title, sx(n.x), sy(n.y) + 7);
+  }
+  // étiquettes de systèmes
+  for (const s of SYS) {
+    const X = sx(s.cx), Y = sy(s.cy - s.r) - 30;
+    ctx.font = '700 13px ' + getComputedStyle(document.body).fontFamily; ctx.fillStyle = '#e8ecff';
+    ctx.fillText(s.name, X, Y);
+    ctx.font = '500 10.5px ' + getComputedStyle(document.body).fontFamily; ctx.fillStyle = 'rgba(180,190,230,.75)';
+    ctx.fillText(`${s.n} notes · ${s.ilots} îlot${s.ilots > 1 ? 's' : ''}${s.orphans ? ' · ' + s.orphans + ' à relier' : ''}`, X, Y + 16);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ---------------- interactions canvas ---------------- */
+let drag = null; const ptrs = new Map(); let pinch = null, downAt = null;
+function pick(X, Y) {
+  let best = null, bd = 14;
+  for (const n of nodes.values()) { const d = Math.hypot(sx(n.x) - X, sy(n.y) - Y); if (d < bd) { bd = d; best = n; } }
+  return best;
+}
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: camT.k }; drag = null; return; }
+  const n = pick(e.clientX, e.clientY);
+  downAt = { x: e.clientX, y: e.clientY, t: Date.now(), n };
+  drag = (n && !S.settings.locked) ? { node: n, moved: false } : { pan: true, cx: camT.x, cy: camT.y, x: e.clientX, y: e.clientY, moved: false };
+});
+cv.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()]; camT.k = clampK(pinch.k * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d); return; }
+  if (!drag) { const n = pick(e.clientX, e.clientY); hover = n ? n.id : null; cv.style.cursor = n ? 'pointer' : 'grab'; return; }
+  if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 5) drag.moved = true;
+  if (!drag.moved) return;
+  if (drag.node) { drag.node.x = wx(e.clientX); drag.node.y = wy(e.clientY); alpha = Math.max(alpha, 0.3); }
+  else { camT.x = drag.cx - (e.clientX - drag.x) / cam.k; camT.y = drag.cy - (e.clientY - drag.y) / cam.k; cam.x = camT.x; cam.y = camT.y; }
+});
+function endPtr(e) {
+  ptrs.delete(e.pointerId);
+  if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; return; }
+  if (drag && drag.node && drag.moved) {
+    const n = drag.node; n.tx = n.x; n.ty = n.y; S.pins[n.id] = { x: n.x, y: n.y }; save();
+  } else if (drag && !drag.moved && downAt) {
+    if (downAt.n) openNote(downAt.n.id); else { selected = null; }
+  }
+  drag = null;
+}
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('dblclick', e => { if (!pick(e.clientX, e.clientY)) newNote(); });
+const clampK = k => Math.max(0.08, Math.min(8, k));
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const before = { x: wx(e.clientX), y: wy(e.clientY) };
+  const nk = clampK(camT.k * Math.exp(-e.deltaY * 0.0015));
+  camT.k = nk; cam.k = nk;
+  camT.x = before.x - (e.clientX - W / 2) / nk; camT.y = before.y - (e.clientY - H / 2 + 10) / nk; cam.x = camT.x; cam.y = camT.y;
+  zoomFar = false; $('#bZoom').textContent = 'ZOOM FAR';
+}, { passive: false });
+function focusNode(id) {
+  const n = nodes.get(id); if (!n) return;
+  camT.x = n.tx; camT.y = n.ty; camT.k = Math.max(camT.k, 1.6);
+  if (innerWidth > 720 && drawer.classList.contains('open')) camT.x += 200 / camT.k;
+}
+
+/* ---------------- tiroir & onglets ---------------- */
+const drawer = $('#drawer');
+let tab = 'notes';
+function openTab(t) {
+  tab = t; drawer.classList.add('open');
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'p-' + t));
+  ({ notes: renderNotes, review: renderReview, goals: renderGoals, ai: renderAI, settings: renderSettings })[t]();
+}
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => openTab(b.dataset.tab));
+$('#close').onclick = () => { drawer.classList.remove('open'); selected = null; };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') $('#close').onclick();
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); selected = null; openTab('notes'); setTimeout(() => $('#q')?.focus(), 50); }
+});
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2200); }
+
+/* ---------------- markdown minimal ---------------- */
+function inline(s) {
+  return s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+    .replace(/\[\[([^\]|#]+)(?:[#|]([^\]]*))?\]\]/g, (_, t, al) => `<a class="wl${IDX.byTitle.has(t.trim().toLowerCase()) ? '' : ' miss'}" data-t="${t.trim()}">${al || t}</a>`)
+    .replace(/(^|\s)#([\p{L}\p{N}_\-\/]+)/gu, '$1<span class="tag">#$2</span>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="wl">$1</a>');
+}
+function md(src) {
+  const blocks = []; let h = esc(src).replace(/```([\s\S]*?)```/g, (_, c) => { blocks.push(c); return '\u0000' + (blocks.length - 1) + '\u0000'; });
+  let out = '', inList = false;
+  for (const line of h.split('\n')) {
+    let m;
+    const close = () => { if (inList) { out += '</ul>'; inList = false; } };
+    if ((m = line.match(/^\u0000(\d+)\u0000$/))) { close(); out += `<pre><code>${blocks[m[1]]}</code></pre>`; }
+    else if ((m = line.match(/^(#{1,3})\s+(.*)$/))) { close(); out += `<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`; }
+    else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${inline(m[1])}</li>`; }
+    else if ((m = line.match(/^&gt;\s?(.*)$/))) { close(); out += `<blockquote>${inline(m[1])}</blockquote>`; }
+    else if ((m = line.match(RX_CARD))) { close(); out += `<div class="qa"><b>Q</b>${inline(m[1])}<br><b>R</b>${inline(m[2])}</div>`; }
+    else if (!line.trim()) { close(); out += '<div style="height:8px"></div>'; }
+    else { close(); out += `<div>${inline(line)}</div>`; }
+  }
+  if (inList) out += '</ul>';
+  return out.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[i]);
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('.wl[data-t]'); if (!a) return;
+  e.preventDefault(); openByTitle(a.dataset.t);
+});
+function openByTitle(t) {
+  const n = IDX.byTitle.get(t.toLowerCase());
+  if (n) return openNote(n.id);
+  if (confirm(`Créer la note « ${t} » ?`)) newNote(t);
+}
+
+/* ---------------- notes (Obsidian) ---------------- */
+let editMode = false;
+function openNote(id) { selected = id; editMode = false; openTab('notes'); focusNode(id); }
+function newNote(title) {
+  let t = title || 'Nouvelle note', i = 2;
+  while (IDX.byTitle.has(t.toLowerCase())) t = (title || 'Nouvelle note') + ' ' + i++;
+  const n = { id: uid(), title: t, body: '', created: Date.now(), updated: Date.now() };
+  S.notes.push(n); rebuild(); save(); selected = n.id; editMode = true; openTab('notes'); focusNode(n.id);
+  setTimeout(() => $('#body')?.focus(), 60);
+}
+function renderNotes() {
+  const p = $('#p-notes');
+  const n = selected && IDX.byId.get(selected);
+  if (!n) {
+    const q = (p.querySelector('#q')?.value || '').toLowerCase();
+    const list = S.notes.filter(x => !q || x.title.toLowerCase().includes(q) || x.body.toLowerCase().includes(q)).sort((a, b) => b.updated - a.updated);
+    const orphans = S.notes.filter(x => degree(x.id) === 0);
+    p.innerHTML = `<div class="row"><input class="in" id="q" placeholder="Rechercher… (Ctrl+K)" value="${esc(q)}" style="flex:1"><button class="btn pri" id="nn">＋ Note</button></div>
+      ${orphans.length ? `<div class="box"><h3>À relier (${orphans.length})</h3><div class="chips">${orphans.map(o => `<span class="chip wl" data-t="${esc(o.title)}">${esc(o.title)}</span>`).join('')}</div></div>` : ''}
+      <div class="list">${list.map(x => `<div class="li" data-id="${x.id}"><span>${esc(x.title)}</span><small>${degree(x.id)} liens · ${x._p.cards.length} cartes</small></div>`).join('') || '<p class="muted">Aucun résultat.</p>'}</div>`;
+    const qi = p.querySelector('#q');
+    qi.oninput = () => { const pos = qi.selectionStart; renderNotes(); const nq = $('#q'); nq.focus(); nq.setSelectionRange(pos, pos); };
+    p.querySelector('#nn').onclick = () => newNote();
+    p.querySelectorAll('.li').forEach(li => li.onclick = () => openNote(li.dataset.id));
+    return;
+  }
+  const back = [...(IDX.inn.get(n.id) || [])].map(id => IDX.byId.get(id));
+  const re = new RegExp('(^|[^\\[])' + n.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const unlinked = S.notes.filter(x => x.id !== n.id && !IDX.out.get(x.id).has(n.id) && re.test(x.body));
+  p.innerHTML = `<div class="row" style="justify-content:space-between">
+      <button class="btn sm" id="bk">← Notes</button>
+      <div class="row"><button class="btn sm" id="tg">${editMode ? 'Aperçu' : 'Éditer'}</button><button class="btn sm danger" id="del">Supprimer</button></div></div>
+    <input class="title-in" id="title" value="${esc(n.title)}">
+    ${editMode ? `<textarea class="in" id="body" placeholder="Écrire en Markdown. [[Lien]] · #tag · Question :: Réponse">${esc(n.body)}</textarea>`
+      : `<div class="md" id="prev">${md(n.body) || '<p class="muted">Note vide — cliquer sur Éditer.</p>'}</div>`}
+    <div class="box"><h3>Assistant</h3><div class="row">
+      <button class="btn sm" data-ai="cards">✦ Générer des cartes</button>
+      <button class="btn sm" data-ai="links">✦ Suggérer des liens</button>
+      <button class="btn sm" data-ai="sum">✦ Résumer</button>
+      <button class="btn sm" data-ai="ask">✦ Interroger</button></div><div id="aiOut" class="md" style="margin-top:8px"></div></div>
+    <div class="box"><h3>Rétroliens (${back.length})</h3>${back.length ? `<div class="chips">${back.map(b => `<span class="chip wl" data-t="${esc(b.title)}">${esc(b.title)}</span>`).join('')}</div>` : '<span class="muted">Aucun — note à relier.</span>'}</div>
+    ${unlinked.length ? `<div class="box"><h3>Mentions non liées</h3>${unlinked.map(u => `<div class="li"><span class="wl" data-t="${esc(u.title)}">${esc(u.title)}</span><button class="btn sm" data-link="${u.id}">Lier</button></div>`).join('')}</div>` : ''}
+    <p class="muted" style="font-size:12px;margin-top:12px">${n._p.cards.length} carte(s) · modifiée ${new Date(n.updated).toLocaleString('fr-FR')}</p>`;
+  p.querySelector('#bk').onclick = () => { selected = null; renderNotes(); };
+  p.querySelector('#tg').onclick = () => { editMode = !editMode; renderNotes(); };
+  p.querySelector('#del').onclick = () => {
+    if (!confirm(`Supprimer « ${n.title} » ?`)) return;
+    S.notes = S.notes.filter(x => x.id !== n.id); delete S.pins[n.id]; selected = null; rebuild(); save(); renderNotes();
+  };
+  const ti = p.querySelector('#title');
+  ti.onchange = () => {
+    const nt = ti.value.trim(); if (!nt || nt === n.title) return;
+    if (IDX.byTitle.has(nt.toLowerCase())) { toast('Ce titre existe déjà'); ti.value = n.title; return; }
+    // renommer : mettre à jour les liens entrants (comme Obsidian)
+    const rx = new RegExp('\\[\\[' + n.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=[\\]|#])', 'gi');
+    for (const x of S.notes) x.body = x.body.replace(rx, '[[' + nt);
+    n.title = nt; n.updated = Date.now(); rebuild(); save(); toast('Renommée — liens mis à jour');
+  };
+  const bd = p.querySelector('#body');
+  if (bd) { let t; bd.oninput = () => { n.body = bd.value; n.updated = Date.now(); clearTimeout(t); t = setTimeout(() => { rebuild(); save(); }, 500); }; }
+  p.querySelectorAll('[data-link]').forEach(b => b.onclick = () => {
+    const x = IDX.byId.get(b.dataset.link);
+    x.body = x.body.replace(re, (m0, pre) => pre + '[[' + n.title + ']]'); x.updated = Date.now(); rebuild(); save(); renderNotes();
+  });
+  p.querySelectorAll('[data-ai]').forEach(b => b.onclick = () => noteAI(n, b.dataset.ai));
+}
+
+/* ---------------- révision (Anki, SM-2) ---------------- */
+let rv = null; // {queue, i, shown}
+function schedule(st, g) {
+  const s = { ...st };
+  if (g === 0) { s.lapses++; s.reps = 0; s.ease = Math.max(1.3, s.ease - 0.2); s.ivl = 0; s.due = Date.now() + 10 * 60e3; return s; }
+  let ivl = s.reps === 0 ? 1 : s.reps === 1 ? 3 : Math.round(s.ivl * s.ease);
+  if (g === 1) { ivl = Math.max(1, Math.round((s.ivl || 1) * 1.2)); s.ease = Math.max(1.3, s.ease - 0.15); }
+  if (g === 3) { ivl = Math.round(ivl * 1.3) + 1; s.ease += 0.15; }
+  s.reps++; s.ivl = ivl; s.due = Date.now() + ivl * DAY; return s;
+}
+const fmtIvl = st => st.due - Date.now() < DAY ? '10 min' : Math.round((st.due - Date.now()) / DAY) + ' j';
+function renderReview() {
+  const p = $('#p-review');
+  if (!rv || rv.i >= rv.queue.length) {
+    const due = dueCards(), all = IDX.cards.length;
+    const nextDue = IDX.cards.map(c => S.cards[c.id].due).filter(d => d > Date.now()).sort()[0];
+    p.innerHTML = `<h3>Révision espacée</h3>
+      <div class="card"><div class="q">${due.length} carte${due.length > 1 ? 's' : ''} à réviser</div>
+      <div class="muted">${all} cartes au total${nextDue && !due.length ? ' · prochaine : ' + new Date(nextDue).toLocaleString('fr-FR') : ''}</div>
+      ${due.length ? '<div><button class="btn pri" id="go">Commencer</button></div>' : ''}</div>
+      <p class="muted" style="font-size:12.5px;margin-top:12px">Créer une carte : écrire une ligne <code>Question :: Réponse</code> dans n'importe quelle note, ou utiliser « ✦ Générer des cartes ».</p>`;
+    rv = null;
+    p.querySelector('#go')?.addEventListener('click', () => { rv = { queue: due.sort(() => Math.random() - 0.5), i: 0, shown: false }; renderReview(); });
+    return;
+  }
+  const c = rv.queue[rv.i], st = S.cards[c.id], note = IDX.byId.get(c.note);
+  p.innerHTML = `<div class="row" style="justify-content:space-between"><h3>${rv.i + 1} / ${rv.queue.length}</h3><span class="wl" data-t="${esc(note?.title || '')}">${esc(note?.title || '')}</span></div>
+    <div class="card"><div class="q">${inline(esc(c.q))}</div>${rv.shown ? `<div class="a">${inline(esc(c.a))}</div>` : ''}</div>
+    ${rv.shown ? `<div class="grades">${['À revoir', 'Difficile', 'Bien', 'Facile'].map((l, g) => `<button class="g${g}" data-g="${g}">${l}<small>${fmtIvl(schedule(st, g))}</small></button>`).join('')}</div>`
+      : '<div style="margin-top:12px"><button class="btn pri" id="show" style="width:100%">Afficher la réponse (Espace)</button></div>'}`;
+  p.querySelector('#show')?.addEventListener('click', () => { rv.shown = true; renderReview(); });
+  p.querySelectorAll('[data-g]').forEach(b => b.onclick = () => grade(+b.dataset.g));
+}
+function grade(g) {
+  const c = rv.queue[rv.i]; S.cards[c.id] = schedule(S.cards[c.id], g);
+  if (g === 0) rv.queue.push(c);
+  rv.i++; rv.shown = false; save(); refreshChrome(); renderReview();
+  if (!rv || rv.i >= (rv?.queue.length || 0)) autoGoal(/révis/i);
+}
+document.addEventListener('keydown', e => {
+  if (tab !== 'review' || !rv || !drawer.classList.contains('open') || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); if (!rv.shown) { rv.shown = true; renderReview(); } else grade(2); }
+  if (rv.shown && '1234'.includes(e.key)) grade(+e.key - 1);
+});
+
+/* ---------------- objectifs du jour ---------------- */
+function rollGoals() {
+  if (S.goals.date !== today()) {
+    S.goals = { date: today(), items: S.goals.items.map(i => ({ text: i.done ? '' : i.text, done: false })) };
+    save();
+  }
+}
+function autoGoal(rx) { const g = S.goals.items.find(i => rx.test(i.text) && !i.done); if (g) { g.done = true; save(); refreshChrome(); toast('Objectif atteint : ' + g.text); } }
+function renderGoals() {
+  rollGoals();
+  const p = $('#p-goals');
+  p.innerHTML = `<h3>3 objectifs du jour · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+    ${S.goals.items.map((g, i) => `<div class="goal ${g.done ? 'done' : ''}"><input type="checkbox" data-i="${i}" ${g.done ? 'checked' : ''}><input class="in" data-t="${i}" value="${esc(g.text)}" placeholder="Objectif ${i + 1}"></div>`).join('')}
+    <p class="muted" style="font-size:12.5px">Les objectifs non terminés sont reportés au lendemain. « Réviser… » se coche seul quand la file de révision est vide.</p>`;
+  p.querySelectorAll('[type=checkbox]').forEach(c => c.onchange = () => { S.goals.items[c.dataset.i].done = c.checked; save(); refreshChrome(); renderGoals(); });
+  p.querySelectorAll('[data-t]').forEach(t => t.oninput = () => { S.goals.items[t.dataset.t].text = t.value; save(); refreshChrome(); });
+}
+
+/* ---------------- IA (Claude / OpenAI-compatible) ---------------- */
+async function callAI(system, messages, maxTokens = 2048) {
+  const st = S.settings;
+  if (st.provider === 'anthropic') {
+    if (!st.apiKey) throw new Error('Clé API Anthropic manquante — onglet ✱ Réglages.');
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': st.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: st.model, max_tokens: maxTokens, system, messages })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error?.message || 'Erreur HTTP ' + r.status);
+    return j.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  }
+  const r = await fetch(st.baseUrl.replace(/\/$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: Object.assign({ 'content-type': 'application/json' }, st.apiKey ? { authorization: 'Bearer ' + st.apiKey } : {}),
+    body: JSON.stringify({ model: st.oaModel, max_tokens: maxTokens, messages: [{ role: 'system', content: system }, ...messages] })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error?.message || 'Erreur HTTP ' + r.status);
+  return j.choices?.[0]?.message?.content || '';
+}
+const SYS_BASE = 'Tu es l\'assistant d\'un second cerveau personnel (notes Markdown à la Obsidian). Réponds en français, de façon concise et structurée. Pour citer ou proposer une note, utilise la syntaxe [[Titre exact]].';
+const noteCtx = ns => ns.map(n => `### [[${n.title}]]\n${n.body}`).join('\n\n').slice(0, 120000);
+
+async function noteAI(n, kind) {
+  const out = $('#aiOut');
+  if (kind === 'ask') { aiMode = 'notebook'; aiSel = new Set([n.id, ...IDX.out.get(n.id), ...IDX.inn.get(n.id)]); openTab('ai'); $('#prompt')?.focus(); return; }
+  out.innerHTML = '<span class="spin"></span> Réflexion…';
+  try {
+    if (kind === 'cards') {
+      const txt = await callAI(SYS_BASE, [{ role: 'user', content: `Crée 3 à 6 cartes de révision (style Anki) à partir de cette note. Réponds UNIQUEMENT par des lignes au format "Question :: Réponse", sans numérotation.\n\n${noteCtx([n])}` }]);
+      const lines = txt.split('\n').map(l => l.replace(/^\s*[-*\d.]+\s*/, '').trim()).filter(l => RX_CARD.test(l));
+      if (!lines.length) throw new Error('Aucune carte reconnue dans la réponse.');
+      n.body += (n.body.endsWith('\n') ? '' : '\n') + '\n## Cartes\n' + lines.join('\n') + '\n'; n.updated = Date.now();
+      rebuild(); save(); renderNotes(); toast(lines.length + ' cartes ajoutées');
+    } else if (kind === 'links') {
+      const titles = S.notes.filter(x => x.id !== n.id).map(x => x.title);
+      const txt = await callAI(SYS_BASE, [{ role: 'user', content: `Voici une note puis la liste des autres notes. Propose jusqu'à 5 titres de la liste avec lesquels la relier, un par ligne, au format "[[Titre]] — raison courte". N'invente aucun titre.\n\n${noteCtx([n])}\n\nListe :\n${titles.join('\n')}` }]);
+      const sug = [...txt.matchAll(/\[\[([^\]]+)\]\]\s*[—-]?\s*(.*)/g)].filter(m => IDX.byTitle.has(m[1].toLowerCase()));
+      out.innerHTML = sug.length ? sug.map(m => `<div class="li"><span><span class="wl" data-t="${esc(m[1])}">${esc(m[1])}</span> <span class="muted">${esc(m[2])}</span></span><button class="btn sm" data-add="${esc(m[1])}">＋</button></div>`).join('') : md(txt);
+      out.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { n.body += `\nVoir aussi [[${b.dataset.add}]]`; n.updated = Date.now(); rebuild(); save(); b.disabled = true; b.textContent = '✓'; autoGoal(/reli/i); });
+    } else {
+      out.innerHTML = md(await callAI(SYS_BASE, [{ role: 'user', content: `Résume cette note en 3 à 5 puces, puis propose une question de réflexion.\n\n${noteCtx([n])}` }]));
+    }
+  } catch (e) { out.innerHTML = `<div class="msg e">${esc(e.message)}</div>`; }
+}
+
+let aiMode = 'notebook', aiSel = null, busy = false;
+function renderAI() {
+  const p = $('#p-ai');
+  if (!aiSel) aiSel = new Set(selected ? [selected] : S.notes.slice(0, 8).map(n => n.id));
+  const st = S.settings;
+  p.innerHTML = `<div class="row" style="justify-content:space-between">
+      <div class="seg"><button data-m="notebook" class="${aiMode === 'notebook' ? 'on' : ''}">Notebook (sources)</button><button data-m="chat" class="${aiMode === 'chat' ? 'on' : ''}">Chat libre</button></div>
+      <button class="btn sm" id="clr">Effacer</button></div>
+    ${aiMode === 'notebook' ? `<div class="row" style="margin-top:8px;justify-content:space-between"><span class="muted" style="font-size:12.5px">${aiSel.size} source(s) — réponses citées</span>
+      <span class="row"><button class="btn sm" id="all">Tout</button><button class="btn sm" id="none">Aucune</button><button class="btn sm" id="addSrc">＋ Source</button></span></div>
+      <div class="srcs">${S.notes.map(n => `<label><input type="checkbox" data-s="${n.id}" ${aiSel.has(n.id) ? 'checked' : ''}> ${esc(n.title)}</label>`).join('')}</div>` : ''}
+    <div class="msgs" id="msgs">${S.chat.length ? S.chat.map(m => `<div class="msg ${m.role === 'user' ? 'u' : m.err ? 'a e' : 'a'} md">${m.role === 'user' ? esc(m.content) : md(m.content)}</div>`).join('')
+      : `<div class="muted" style="margin:auto;text-align:center;max-width:300px">${st.apiKey || st.provider !== 'anthropic' ? 'Posez une question. En mode Notebook, la réponse s\'appuie uniquement sur les sources cochées.' : 'Ajoutez une clé API dans ✱ Réglages (Claude, ChatGPT ou un modèle local) pour activer l\'assistant.'}</div>`}</div>
+    <div class="composer"><textarea class="in" id="prompt" placeholder="Demander à votre second cerveau…"></textarea><button class="btn pri" id="send">${busy ? '<span class="spin"></span>' : '➤'}</button></div>`;
+  const msgs = p.querySelector('#msgs'); msgs.scrollTop = msgs.scrollHeight;
+  p.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { aiMode = b.dataset.m; renderAI(); });
+  p.querySelectorAll('[data-s]').forEach(c => c.onchange = () => { c.checked ? aiSel.add(c.dataset.s) : aiSel.delete(c.dataset.s); renderAI(); });
+  p.querySelector('#all')?.addEventListener('click', () => { aiSel = new Set(S.notes.map(n => n.id)); renderAI(); });
+  p.querySelector('#none')?.addEventListener('click', () => { aiSel = new Set(); renderAI(); });
+  p.querySelector('#addSrc')?.addEventListener('click', () => {
+    const txt = prompt('Coller le texte de la source (article, transcription, PDF copié…) :'); if (!txt) return;
+    const title = prompt('Titre de la source :', 'Source ' + new Date().toLocaleDateString('fr-FR')) || 'Source';
+    const n = { id: uid(), title, body: '#source\n' + txt, created: Date.now(), updated: Date.now() };
+    S.notes.push(n); aiSel.add(n.id); rebuild(); save(); renderAI();
+  });
+  p.querySelector('#clr').onclick = () => { S.chat = []; save(); renderAI(); };
+  const pr = p.querySelector('#prompt');
+  pr.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+  p.querySelector('#send').onclick = send;
+  async function send() {
+    const q = pr.value.trim(); if (!q || busy) return;
+    S.chat.push({ role: 'user', content: q }); busy = true; renderAI();
+    const srcs = [...aiSel].map(id => IDX.byId.get(id)).filter(Boolean);
+    const system = aiMode === 'notebook'
+      ? SYS_BASE + `\nMODE NOTEBOOK : réponds UNIQUEMENT à partir des sources ci-dessous. Cite chaque affirmation avec [[Titre]]. Si l'information n'y est pas, dis-le clairement.\n\nSOURCES :\n${noteCtx(srcs)}`
+      : SYS_BASE + `\nTitres des notes existantes : ${S.notes.map(n => n.title).join(' | ').slice(0, 8000)}`;
+    try {
+      const hist = S.chat.filter(m => !m.err).slice(-12).map(m => ({ role: m.role, content: m.content }));
+      S.chat.push({ role: 'assistant', content: await callAI(system, hist) });
+    } catch (e) { S.chat.push({ role: 'assistant', content: '⚠ ' + e.message, err: true }); }
+    busy = false; save(); if (tab === 'ai') renderAI();
+  }
+}
+
+/* ---------------- réglages & données ---------------- */
+function renderSettings() {
+  const st = S.settings, p = $('#p-settings');
+  p.innerHTML = `<h3>Fournisseur IA</h3>
+    <select class="in" id="prov"><option value="anthropic">Claude (Anthropic)</option><option value="openai">ChatGPT / compatible OpenAI (Ollama, LM Studio, Mistral…)</option></select>
+    ${st.provider === 'anthropic' ? `<label class="lbl">Modèle</label><input class="in" id="model" value="${esc(st.model)}">`
+      : `<label class="lbl">URL de base</label><input class="in" id="base" value="${esc(st.baseUrl)}"><label class="lbl">Modèle</label><input class="in" id="oam" value="${esc(st.oaModel)}">
+         <p class="muted" style="font-size:12px">Local et 100 % souverain : Ollama → <code>http://localhost:11434/v1</code>, sans clé.</p>`}
+    <label class="lbl">Clé API</label><input class="in" id="key" type="password" value="${esc(st.apiKey)}" placeholder="sk-…">
+    <p class="muted" style="font-size:12px">La clé reste dans ce navigateur (localStorage) et n'est envoyée qu'au fournisseur choisi.</p>
+    <div class="row"><button class="btn sm" id="test">Tester</button><span id="testOut" class="muted"></span></div>
+    <h3 style="margin-top:22px">Données</h3>
+    <div class="row">
+      <button class="btn sm" id="ex">⤓ Exporter (JSON)</button>
+      <button class="btn sm" id="im">⤒ Importer JSON</button>
+      <button class="btn sm" id="imMd">⤒ Fichiers .md</button>
+      <button class="btn sm" id="imDir">⤒ Coffre Obsidian</button>
+      <button class="btn sm" id="exMd">⤓ Note en .md</button>
+    </div>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="unpin">Réinitialiser la disposition</button><button class="btn sm" id="demo">Recharger la démo</button><button class="btn sm danger" id="wipe">Tout effacer</button></div>
+    <h3 style="margin-top:22px">Syntaxe</h3>
+    <div class="md muted" style="font-size:12.5px">${md('- `[[Titre]]` — lien vers une note\n- `#systeme/ilot` — le 1er tag place la note : la racine = planète, le tag complet = îlot\n- `Question :: Réponse` — carte de révision\n- Point orange = note isolée (à relier)')}</div>`;
+  p.querySelector('#prov').value = st.provider;
+  p.querySelector('#prov').onchange = e => { st.provider = e.target.value; save(); refreshChrome(); renderSettings(); };
+  const bind = (id, k) => { const el = p.querySelector(id); if (el) el.oninput = () => { st[k] = el.value.trim(); save(); refreshChrome(); }; };
+  bind('#model', 'model'); bind('#base', 'baseUrl'); bind('#oam', 'oaModel'); bind('#key', 'apiKey');
+  p.querySelector('#test').onclick = async () => {
+    const o = p.querySelector('#testOut'); o.innerHTML = '<span class="spin"></span>';
+    try { const r = await callAI('Réponds en un mot.', [{ role: 'user', content: 'Dis « prêt ».' }], 20); o.textContent = '✓ ' + r.trim(); }
+    catch (e) { o.textContent = '✗ ' + e.message; }
+  };
+  p.querySelector('#ex').onclick = () => download('orbite-' + today() + '.json', JSON.stringify(S, (k, v) => k === '_p' ? undefined : k === 'apiKey' ? '' : v, 1), 'application/json');
+  p.querySelector('#exMd').onclick = () => { const n = IDX.byId.get(selected); if (!n) return toast('Ouvrir une note d\'abord'); download(n.title.replace(/[\\/:*?"<>|]/g, '_') + '.md', n.body, 'text/markdown'); };
+  p.querySelector('#im').onclick = () => $('#fileJson').click();
+  p.querySelector('#imMd').onclick = () => $('#fileMd').click();
+  p.querySelector('#imDir').onclick = () => $('#fileDir').click();
+  p.querySelector('#unpin').onclick = () => { S.pins = {}; rebuild(); save(); toast('Disposition réinitialisée'); };
+  p.querySelector('#demo').onclick = () => { if (confirm('Remplacer toutes les données par la démo ?')) { const key = st.apiKey; S = seed(); S.settings.apiKey = key; selected = null; rebuild(); save(); fitAll(); } };
+  p.querySelector('#wipe').onclick = () => { if (confirm('Effacer définitivement toutes les notes ?')) { S.notes = []; S.cards = {}; S.pins = {}; S.chat = []; selected = null; rebuild(); save(); } };
+}
+function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+$('#fileJson').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.notes)) throw 0; const key = S.settings.apiKey; S = Object.assign(seed(), d); S.settings.apiKey ||= key; rebuild(); save(); fitAll(); toast(S.notes.length + ' notes importées'); }
+  catch { toast('Fichier JSON invalide'); }
+  e.target.value = '';
+};
+async function importMd(files) {
+  let k = 0;
+  for (const f of files) {
+    if (!/\.(md|markdown|txt)$/i.test(f.name) || /(^|\/)\./.test(f.webkitRelativePath || '')) continue;
+    const title = f.name.replace(/\.(md|markdown|txt)$/i, ''), body = await f.text();
+    const ex = IDX.byTitle.get(title.toLowerCase());
+    if (ex) { ex.body = body; ex.updated = Date.now(); } else S.notes.push({ id: uid(), title, body, created: f.lastModified || Date.now(), updated: f.lastModified || Date.now() });
+    k++;
+  }
+  rebuild(); save(); fitAll(); toast(k + ' note(s) importée(s)');
+}
+$('#fileMd').onchange = e => { importMd([...e.target.files]); e.target.value = ''; };
+$('#fileDir').onchange = e => { importMd([...e.target.files]); e.target.value = ''; };
+
+/* ---------------- barre du haut ---------------- */
+function refreshChrome() {
+  rollGoals();
+  const d = dueCards().length, b = $('#dueN'); b.textContent = d; b.classList.toggle('zero', !d);
+  $('#goalN').textContent = S.goals.items.filter(g => g.text && !g.done).length;
+  $('#bMode').textContent = S.settings.mode === 'planetary' ? 'Planetary' : 'Libre';
+  $('#bLinks').classList.toggle('on', S.settings.allLinks);
+  $('#bLock').classList.toggle('on', S.settings.locked);
+  $('#bLock').textContent = S.settings.locked ? '🔒 Verrouillé' : 'Verrouiller';
+  const orph = S.notes.filter(n => degree(n.id) === 0).length;
+  $('#stats').textContent = `${S.notes.length} notes · ${IDX.edges.length} liens · ${orph} à relier`;
+  const st = S.settings;
+  $('#modelLbl').textContent = (st.provider === 'anthropic' ? st.model : st.oaModel) + (st.apiKey || st.provider !== 'anthropic' ? '' : ' · hors ligne');
+}
+function fitAll() { camT.x = 0; camT.y = 0; camT.k = fitK(); }
+$('#bZoom').onclick = () => {
+  zoomFar = !zoomFar;
+  if (zoomFar) { prevCam = { ...camT }; camT.x = 0; camT.y = 0; camT.k = fitK() * 0.55; }
+  else Object.assign(camT, prevCam && prevCam.k > fitK() * 0.6 ? prevCam : { x: 0, y: 0, k: fitK() });
+  $('#bZoom').textContent = zoomFar ? 'ZOOM NEAR' : 'ZOOM FAR';
+};
+$('#bDues').onclick = () => openTab('review');
+$('#bGoals').onclick = () => openTab('goals');
+$('#bMode').onclick = () => { S.settings.mode = S.settings.mode === 'planetary' ? 'free' : 'planetary'; alpha = 1; save(); refreshChrome(); };
+$('#bLinks').onclick = () => { S.settings.allLinks = !S.settings.allLinks; save(); refreshChrome(); };
+$('#bLock').onclick = () => { S.settings.locked = !S.settings.locked; save(); refreshChrome(); };
+$('#bSettings').onclick = () => openTab('settings');
+$('#bNotes').onclick = () => { selected = null; openTab('notes'); };
+$('#bNew').onclick = () => newNote();
+$('#orb').onclick = () => openTab('ai');
+
+/* ---------------- démarrage ---------------- */
+addEventListener('resize', resize);
+resize(); rebuild(); fitAll(); Object.assign(cam, camT); cam.k *= 0.4;
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
