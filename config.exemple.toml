@@ -1,0 +1,70 @@
+# Copier ce fichier en config.toml puis l'adapter.
+# Aucun secret ici : les clés et mots de passe se donnent par variables d'environnement
+# (ANTHROPIC_API_KEY, SENTINELLE_JETON, MQTT_MOT_DE_PASSE, HA_JETON,
+#  OCTOPRINT_CLE_<NOM>, BAMBU_CODE_<NOM>).
+
+[general]
+nom = "Sentinelle"
+appellation = ""          # ex. "Patron" ; vide = vouvoiement simple
+ville = "Paris"           # ville par défaut pour la météo
+
+[serveur]
+hote = "127.0.0.1"        # "0.0.0.0" pour le réseau local : un jeton devient obligatoire
+port = 8765
+
+[cerveau]
+fournisseur = "auto"      # auto = local s'il répond, sinon Claude | ollama | claude
+
+[cerveau.ollama]
+url = "http://127.0.0.1:11434"
+modele = "llama3.1"       # tout modèle Ollama sachant appeler des outils
+
+[cerveau.claude]
+modele = "claude-opus-5-5"
+effort = "low"            # low | medium | high : plus haut = plus réfléchi mais plus lent
+
+[voix]
+mot_activation = "sentinelle"
+vosk_modele = "modeles/vosk-model-small-fr-0.22"
+piper_voix = "modeles/fr_FR-siwis-medium.onnx"
+
+[mqtt]
+hote = "127.0.0.1"
+port = 1883
+# utilisateur = "sentinelle"
+
+[homeassistant]
+url = "http://homeassistant.local:8123"
+
+# --- Appareils pilotables : l'assistant ne peut agir que sur cette liste ---
+[appareils.lampe_etabli]
+description = "Lampe de l'établi (relais ESP32)"
+type = "mqtt"
+topic = "atelier/lampe_etabli/set"
+topic_etat = "atelier/lampe_etabli/state"
+actions = { allumer = "ON", eteindre = "OFF" }
+
+[appareils.aspiration]
+description = "Aspiration des fumées de soudure"
+type = "gpio"             # relais câblé sur le Raspberry Pi
+broche = 17
+
+[appareils.lumiere_salon]
+description = "Plafonnier du salon"
+type = "homeassistant"
+entite = "light.salon"
+actions = { allumer = "light/turn_on", eteindre = "light/turn_off" }
+
+# --- Imprimantes 3D (lecture seule) ---
+[imprimantes.x1c]
+type = "bambu"            # mode LAN activé sur l'imprimante ; code d'accès : BAMBU_CODE_X1C
+hote = "192.168.1.50"
+serie = "01S00A000000000"
+
+[imprimantes.ender]
+type = "octoprint"        # clé API : OCTOPRINT_CLE_ENDER
+url = "http://octopi.local"
+
+[imprimantes.voron]
+type = "moonraker"        # Klipper
+url = "http://voron.local:7125"

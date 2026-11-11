@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinelle</title>
+<link rel="stylesheet" href="hud.css">
+</head>
+<body>
+<header class="bandeau">
+  <div class="identite">
+    <span class="voyant" id="voyant" aria-hidden="true"></span>
+    <h1 id="nom">Sentinelle</h1>
+    <span class="etat" id="etat" role="status" aria-live="polite">Connexion…</span>
+  </div>
+  <div class="cerveau" role="group" aria-label="Choix du cerveau">
+    <button type="button" data-fournisseur="auto">Auto</button>
+    <button type="button" data-fournisseur="ollama">Local</button>
+    <button type="button" data-fournisseur="claude">Claude</button>
+  </div>
+</header>
+
+<main class="plan">
+  <aside class="tableau" aria-label="Tableau de bord">
+    <section class="carte">
+      <h2>Machine</h2>
+      <dl class="jauges" id="jauges"></dl>
+    </section>
+    <section class="carte">
+      <h2>Cerveau</h2>
+      <ul class="liste" id="fournisseurs"></ul>
+    </section>
+    <section class="carte">
+      <h2>Appareils</h2>
+      <ul class="liste" id="appareils"><li class="vide">Aucun appareil déclaré.</li></ul>
+    </section>
+    <section class="carte">
+      <h2>Minuteurs</h2>
+      <ul class="liste" id="minuteurs"><li class="vide">Aucun minuteur en cours.</li></ul>
+    </section>
+  </aside>
+
+  <section class="dialogue" aria-label="Conversation">
+    <canvas id="cadran" width="440" height="150" aria-hidden="true"></canvas>
+    <ol class="fil" id="fil" aria-live="polite"></ol>
+    <form class="saisie" id="saisie">
+      <button type="button" class="rond" id="micro" aria-label="Parler" aria-pressed="false" title="Parler">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2Z" fill="currentColor"/></svg>
+      </button>
+      <input id="texte" type="text" autocomplete="off" placeholder="Écrire une demande…" aria-label="Demande">
+      <button type="button" class="rond" id="son" aria-label="Lecture vocale des réponses" aria-pressed="true" title="Lecture vocale des réponses">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Z" fill="currentColor"/></svg>
+      </button>
+      <button type="submit" class="envoi">Envoyer</button>
+    </form>
+  </section>
+</main>
+<script src="hud.js"></script>
+</body>
+</html>

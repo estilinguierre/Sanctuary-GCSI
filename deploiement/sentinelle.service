@@ -1,0 +1,14 @@
+# /etc/systemd/system/sentinelle.service — serveur (adapter User et chemins)
+[Unit]
+Description=Sentinelle - serveur
+After=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Sanctuary-GCSI
+EnvironmentFile=-/home/pi/Sanctuary-GCSI/secrets.env
+ExecStart=/home/pi/Sanctuary-GCSI/.venv/bin/python -m sentinelle.serveur
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

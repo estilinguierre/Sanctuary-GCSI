@@ -1,0 +1,16 @@
+# /etc/systemd/system/sentinelle-voix.service — écoute et parole (mode embarqué)
+[Unit]
+Description=Sentinelle - voix
+After=sentinelle.service sound.target
+Requires=sentinelle.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Sanctuary-GCSI
+EnvironmentFile=-/home/pi/Sanctuary-GCSI/secrets.env
+ExecStart=/home/pi/Sanctuary-GCSI/.venv/bin/python -m sentinelle.voix
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
