@@ -1,0 +1,751 @@
+<title>Plaquettes Opération Légion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : cinq planches de choix. Chaque planche pose une question, quatre fiches y répondent.
+   Chaque fiche porte une vignette qui montre le choix, pas qui le décore. Ton acier et laiton. */
+:root{
+  --fond:#e9e8e4; --planche:#ffffff; --encre:#17191c; --encre-2:#4a4f56; --pale:#858b93;
+  --trait:#cfcdc7; --rail:#dedcd6; --oxyde:#1d5f74; --laiton:#a9742a; --sang:#9e2b20;
+  --vert:#2e6b46; --nuit:#15181c; --sur-nuit:#d6d4ce;
+  --t:"Chivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --c:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --m:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --o:0 1px 2px rgba(23,25,28,.07),0 10px 28px rgba(23,25,28,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --fond:#101316; --planche:#191d21; --encre:#eceae5; --encre-2:#aeb4bb; --pale:#7e858d;
+  --trait:#2f353b; --rail:#23282d; --oxyde:#56b4cf; --laiton:#d9a65a; --sang:#e5746a;
+  --vert:#5fb583; --nuit:#07090b; --sur-nuit:#d6d4ce;
+  --o:0 1px 2px rgba(0,0,0,.45),0 12px 32px rgba(0,0,0,.4); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --fond:#101316; --planche:#191d21; --encre:#eceae5; --encre-2:#aeb4bb; --pale:#7e858d;
+  --trait:#2f353b; --rail:#23282d; --oxyde:#56b4cf; --laiton:#d9a65a; --sang:#e5746a;
+  --vert:#5fb583; --nuit:#07090b; --sur-nuit:#d6d4ce;
+  --o:0 1px 2px rgba(0,0,0,.45),0 12px 32px rgba(0,0,0,.4); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:16px/1.55 var(--c)}
+.page{max-width:1280px;margin-inline:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 120px}
+h1,h2,h3,h4,p,ul{margin:0}ul{padding-left:1.1em}
+:focus-visible{outline:2px solid var(--oxyde);outline-offset:3px}
+code{font:500 .88em var(--m);background:color-mix(in srgb,var(--oxyde) 13%,transparent);padding:.1em .35em;border-radius:4px;overflow-wrap:anywhere}
+
+/* en-tête */
+.tete{margin-top:calc(-1 * env(safe-area-inset-top,0px));
+  padding-top:calc(env(safe-area-inset-top,0px) + 34px);padding-bottom:26px;
+  border-bottom:3px solid var(--encre);margin-bottom:30px}
+.tete .eb{font:600 11px var(--m);letter-spacing:.2em;text-transform:uppercase;color:var(--oxyde);margin-bottom:12px}
+.tete h1{font:900 clamp(32px,7vw,66px)/.98 var(--t);letter-spacing:-.03em;text-wrap:balance}
+.tete p{color:var(--encre-2);max-width:66ch;margin-top:14px;font-size:16.5px}
+.tete .rappel{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.tete .rappel span{font:500 11.5px var(--m);border:1px solid var(--trait);border-radius:99px;padding:5px 11px;color:var(--encre-2)}
+
+/* planche */
+.planche{margin-bottom:46px}
+.ph{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;margin-bottom:18px}
+.ph .no{font:900 clamp(40px,8vw,74px)/.82 var(--t);color:var(--trait);letter-spacing:-.04em;font-variant-numeric:lining-nums}
+.ph h2{font:800 clamp(20px,3.6vw,30px)/1.1 var(--t);letter-spacing:-.015em;text-wrap:balance}
+.ph .q{color:var(--encre-2);font-size:15px;margin-top:6px;max-width:72ch}
+.ph .cat{font:600 10.5px var(--m);letter-spacing:.16em;text-transform:uppercase;color:var(--oxyde);display:block;margin-bottom:5px}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(252px,1fr));gap:14px}
+
+/* fiche */
+.fiche{position:relative;background:var(--planche);border:1px solid var(--trait);border-radius:12px;
+  box-shadow:var(--o);display:flex;flex-direction:column;overflow:hidden;min-width:0;
+  text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;appearance:none}
+@media (prefers-reduced-motion:no-preference){.fiche{transition:transform .14s ease-out,box-shadow .14s ease-out}
+.fiche:hover{transform:translateY(-3px);box-shadow:0 3px 6px rgba(23,25,28,.08),0 18px 40px rgba(23,25,28,.12)}}
+.fiche[aria-pressed="true"]{border-color:var(--oxyde);box-shadow:0 0 0 2px var(--oxyde),var(--o)}
+.fiche[aria-pressed="true"] .ref{background:var(--oxyde);color:#fff;border-color:var(--oxyde)}
+.vign{height:132px;border-bottom:1px solid var(--trait);overflow:hidden;position:relative;background:var(--rail)}
+.vign svg{display:block;width:100%;height:100%}
+.corps{padding:13px 14px 15px;display:flex;flex-direction:column;gap:9px;flex:1;min-width:0}
+.hd{display:flex;gap:9px;align-items:flex-start}
+.ref{font:700 11px var(--m);border:1px solid var(--trait);border-radius:5px;padding:3px 7px;color:var(--encre-2);flex:none;letter-spacing:.04em}
+.fiche h3{font:700 16.5px/1.22 var(--t);text-wrap:balance;flex:1;min-width:0}
+.pitch{font-size:13.5px;color:var(--encre-2)}
+.chg{border-top:1px dashed var(--trait);padding-top:9px;display:flex;flex-direction:column;gap:5px}
+.chg b{font:600 9.5px var(--m);letter-spacing:.13em;text-transform:uppercase;color:var(--pale)}
+.chg div{font-size:12.5px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px}
+.chg div::before{content:"→";color:var(--oxyde);font-weight:700}
+.pied{order:9;margin-top:auto;padding-top:9px;display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.eff{display:flex;gap:7px;align-items:center;font:500 10.5px var(--m);color:var(--pale)}
+.eff i{display:flex;gap:2.5px}
+.eff i b{width:7px;height:7px;border-radius:50%;background:var(--trait);display:block}
+.eff i b.on{background:var(--laiton)}
+.reco{font:700 9.5px var(--m);letter-spacing:.1em;text-transform:uppercase;background:var(--vert);color:#fff;
+  border-radius:99px;padding:4px 9px;white-space:nowrap}
+.garde{order:8;margin-top:auto;font-size:12px;color:var(--sang);display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px;align-items:start}
+.garde::before{content:"!";font-weight:800;font-family:var(--m)}
+
+/* barre de sélection */
+.barre{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--nuit);color:var(--sur-nuit);
+  border-top:1px solid var(--trait);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:11px;padding-bottom:calc(11px + env(safe-area-inset-bottom,0px))}
+.barre .in{max-width:1280px;margin-inline:auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.barre .lib{font:600 10px var(--m);letter-spacing:.14em;text-transform:uppercase;color:#7e858d}
+.barre .sel{font:600 14px var(--m);letter-spacing:.06em;color:#fff;flex:1;min-width:120px;font-variant-numeric:tabular-nums}
+.barre button{font:600 12px var(--c);border-radius:99px;padding:8px 14px;cursor:pointer;border:1px solid #39404a;
+  background:transparent;color:var(--sur-nuit)}
+.barre button.p{background:var(--sur-nuit);color:var(--nuit);border-color:var(--sur-nuit)}
+.barre button:disabled{opacity:.4;cursor:default}
+
+/* mini-maquettes de la planche 2 */
+.mk{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:0}
+.mk .p1,.mk .p2{padding:11px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.mk .p2{border-left:1px solid rgba(128,128,128,.3)}
+.mk .t{font-weight:800;line-height:1.08;letter-spacing:-.01em}
+.mk .s{font:500 7.5px var(--m);letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.mk-plan{background:
+  linear-gradient(#d8d6d0 1px,transparent 1px) 0 0/100% 11px,
+  linear-gradient(90deg,#d8d6d0 1px,transparent 1px) 0 0/11px 100%, #f2f1ed;color:#17191c}
+.mk-plan .t{font-family:var(--t);font-size:13px}
+.mk-plan .r{height:3px;width:34px;background:#1d5f74}
+.mk-etin{background:linear-gradient(160deg,#5a5f66,#23262a 70%);color:#fff;position:relative}
+.mk-etin .t{font-family:var(--t);font-size:14px;text-transform:uppercase}
+.mk-etin .band{background:#000;color:#fff;margin:0 -11px;padding:4px 11px;font:700 9px var(--m);letter-spacing:.12em}
+.mk-mat{background:repeating-linear-gradient(103deg,#8a7a63,#8a7a63 3px,#7e6f59 3px,#7e6f59 6px);color:#fff7e9}
+.mk-mat .t{font-family:var(--t);font-size:14px;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.mk-mat .r{height:4px;width:40px;background:#d9a65a}
+.mk-cart{background:#10171c;color:#d7e5ea}
+.mk-cart .t{font-family:var(--m);font-size:11px;font-weight:600;letter-spacing:-.01em}
+.mk-cart .box{border:1px solid #2f4954;border-radius:2px;padding:4px 6px;font:500 7px var(--m);color:#56b4cf;letter-spacing:.08em}
+
+.fin{background:var(--nuit);color:var(--sur-nuit);border-radius:14px;padding:26px 22px;margin-top:10px}
+.fin h2{font:800 24px var(--t);color:#fff;margin-bottom:10px}
+.fin p{color:#9aa1a9;max-width:66ch;font-size:14.5px}
+.fin ol{margin:14px 0 0;padding-left:1.2em;display:flex;flex-direction:column;gap:7px;font-size:14px;color:#9aa1a9}
+.fin ol b{color:#fff}
+@media (max-width:520px){.ph{grid-template-columns:1fr}.ph .no{font-size:34px}}
+</style>
+
+<div class="page">
+
+<header class="tete">
+  <div class="eb">Opération Légion · cinq décisions avant de lancer</div>
+  <h1>Plaquettes de propositions</h1>
+  <p>Le QG est construit et tourne sur des données d'exemple. Avant de le remplir avec les vôtres, cinq choix sont à faire. Chaque planche pose une question et propose quatre réponses : une seule par planche. Touchez une fiche pour la retenir ; la barre du bas récapitule votre sélection.</p>
+  <div class="rappel"><span>5 planches</span><span>20 propositions</span><span>1 choix par planche</span><span>Chaque fiche dit ce qu'elle change dans le QG</span></div>
+</header>
+
+<!-- ===== PLANCHE 1 ===== -->
+<section class="planche">
+  <div class="ph"><div class="no">01</div><div>
+    <span class="cat">Planche 1 sur 5 · positionnement</span>
+    <h2>Quelle niche le QG va-t-il servir ?</h2>
+    <p class="q">Le vocabulaire de niche est le filtre qui fait tout le reste : il décide quelle tendance est exploitable, quelle question mérite un post, quel mot-clé compte. Il n'en tient qu'un à la fois. Vos quatre métiers ne peuvent pas partager le même QG sans le rendre flou.</p>
+  </div></div>
+  <div class="grille">
+
+    <button class="fiche" data-pl="1" data-ref="1A" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g stroke="var(--oxyde)" stroke-width="2.5" fill="none">
+          <path d="M28 104 V40 M212 104 V40 M28 40 H212"/>
+          <path d="M28 104 H212" stroke="var(--encre)" stroke-width="3"/>
+          <g stroke-width="2">
+            <path d="M52 104 V40 M76 104 V40 M100 104 V40 M124 104 V40 M148 104 V40 M172 104 V40 M196 104 V40"/>
+          </g>
+          <path d="M28 62 H212" stroke="var(--laiton)"/>
+        </g>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">garde-corps · verrière · escalier</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">1A</span><h3>Métallerie sur mesure</h3><span class="reco">Recommandé</span></div>
+        <p class="pitch">Garde-corps, verrières, escaliers, portails. Clientèle locale, panier de plusieurs milliers d'euros, preuve visuelle immédiate : l'avant / après d'un chantier se filme tout seul.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Vocabulaire : soudure, garde-corps, verrière, acier, chantier, pose, cordon</div>
+          <div><code>offre/tarifs.md</code> en fourchettes au mètre linéaire, pas en prix fixes</div>
+          <div>L'appel à l'action devient « envoyez vos mesures », pas « achetez »</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+        <p class="garde">Un prix au mètre varie selon le chantier : le contrôle de marque bloquera tout montant absent des tarifs. Déclarez des fourchettes nommées.</p>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="1" data-ref="1B" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g fill="none" stroke="var(--oxyde)" stroke-width="2.5">
+          <rect x="36" y="30" width="168" height="62" rx="4"/>
+          <path d="M36 46 H204"/>
+        </g>
+        <g fill="var(--laiton)"><circle cx="48" cy="38" r="3"/><circle cx="60" cy="38" r="3"/><circle cx="72" cy="38" r="3"/></g>
+        <g stroke="var(--encre)" stroke-width="2" fill="none">
+          <path d="M70 78 L94 58 L118 72 L142 52 L166 64"/>
+        </g>
+        <path d="M100 92 V104 H140 V92" fill="none" stroke="var(--pale)" stroke-width="2"/>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">SolidWorks · slicing · FAO</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">1B</span><h3>Formation CAO / FAO</h3></div>
+        <p class="pitch">Stages SolidWorks, impression 3D, préparation de fabrication. Un format que le QG sait déjà très bien tenir : dates, places limitées, questions de débutants, promesse pédagogique.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Vocabulaire : esquisse, assemblage, cotation, slicer, support, tolérance</div>
+          <div>La FAQ porte le gros du travail : niveau requis, licence, matériel</div>
+          <div>Le marqueur de prospects sert à plein : « combien ? » = une place</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b></b></i></span></div>
+        <p class="garde">Demande une offre packagée dès le départ : dates, lieu, nombre de places. Sans cela, le QG écrit dans le vide.</p>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="1" data-ref="1C" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g fill="none" stroke="var(--oxyde)" stroke-width="2.5">
+          <path d="M44 86 h152 a6 6 0 0 0 6-6 V44 a6 6 0 0 0-6-6 H44 a6 6 0 0 0-6 6 v36 a6 6 0 0 0 6 6z"/>
+          <rect x="52" y="48" width="78" height="30" rx="2"/>
+        </g>
+        <g fill="var(--laiton)">
+          <rect x="140" y="48" width="12" height="7" rx="1.5"/><rect x="156" y="48" width="12" height="7" rx="1.5"/>
+          <rect x="172" y="48" width="12" height="7" rx="1.5"/><rect x="140" y="59" width="12" height="7" rx="1.5"/>
+          <rect x="156" y="59" width="12" height="7" rx="1.5"/><rect x="172" y="59" width="12" height="7" rx="1.5"/>
+          <rect x="140" y="70" width="44" height="7" rx="1.5"/>
+        </g>
+        <path d="M60 86 V98 H180 V86" fill="none" stroke="var(--pale)" stroke-width="2"/>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">boîtier · Pi · impression 3D</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">1C</span><h3>Cyberdecks et boîtiers</h3></div>
+        <p class="pitch">Boîtiers sur mesure, intégration électronique, pièces imprimées. Public maker mondial, très actif en commentaires, mais qui achète des objets à 40 € plutôt qu'un chantier à 4 000 €.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Vocabulaire : boîtier, PETG, insert, Raspberry, refroidissement, STL</div>
+          <div>Shopify devient central : l'attribution UTM prend tout son sens</div>
+          <div>Les réponses passent en anglais : à prévoir dans le guide de voix</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b></i></span></div>
+        <p class="garde">Volume élevé, panier faible : il faut beaucoup de vues pour un chiffre d'affaires correct. C'est la niche la plus exigeante en production.</p>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="1" data-ref="1D" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g stroke="var(--laiton)" stroke-width="3" fill="none">
+          <path d="M40 92 L120 40 L200 92"/><path d="M62 92 V74 M178 92 V74"/>
+        </g>
+        <g stroke="var(--oxyde)" stroke-width="2.5" fill="none">
+          <path d="M40 92 H200"/><path d="M120 40 V92"/><path d="M80 66 L160 66"/>
+        </g>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">charpente · métal · pose</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">1D</span><h3>Chantier bois et métal</h3></div>
+        <p class="pitch">L'ensemble du métier : charpente, serrurerie, métallerie, pose. Le plus proche de votre réalité quotidienne, mais le plus large à tenir : quatre vocabulaires dans un seul QG.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Vocabulaire à 20 mots et plus : le filtre de tendance perd en tranchant</div>
+          <div>Il faut 5 piliers de contenu distincts, un par corps de métier</div>
+          <div>Le planificateur doit alterner les métiers, pas seulement les piliers</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b></i></span></div>
+        <p class="garde">Une niche large donne des posts génériques. Si vous la choisissez, commencez quand même par un seul métier pendant un mois.</p>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ===== PLANCHE 2 ===== -->
+<section class="planche">
+  <div class="ph"><div class="no">02</div><div>
+    <span class="cat">Planche 2 sur 5 · identité visuelle</span>
+    <h2>À quoi ressemblent vos carrousels et vos miniatures ?</h2>
+    <p class="q">Le QG fabrique déjà les pages de carrousel et les miniatures en SVG. Ce qu'il dessine dépend d'un gabarit : fond, typographie, couleur d'accent, place du numéro. Quatre directions, vues ici en vraie taille réduite.</p>
+  </div></div>
+  <div class="grille">
+
+    <button class="fiche" data-pl="2" data-ref="2A" aria-pressed="false">
+      <div class="vign"><div class="mk">
+        <div class="p1 mk-plan"><span class="s">01 / 06</span><div class="t">Trois gestes, pas dix.</div><div class="r"></div></div>
+        <div class="p2 mk-plan"><span class="s">Étape 2</span><div class="t" style="font-size:10px">Pointer avant de souder</div><div class="r"></div></div>
+      </div></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">2A</span><h3>Plan d'atelier</h3></div>
+        <p class="pitch">Fond papier millimétré, filets fins, numéro de page en cartouche, un seul trait de couleur. Lisible, sérieux, immédiatement reconnaissable comme un document technique.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Fond clair : le texte passe en encre foncée, le trait d'accent en oxyde</div>
+          <div>Se lit très bien en carrousel, moins bien en miniature de vidéo</div>
+          <div>Ne demande aucune photo : le QG produit tout seul</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="2" data-ref="2B" aria-pressed="false">
+      <div class="vign"><div class="mk">
+        <div class="p1 mk-etin"><span class="s">Avant</span><div class="t">Ça tenait<br>à ça</div><div class="band">GARDE-CORPS · 6 M</div></div>
+        <div class="p2 mk-etin" style="background:linear-gradient(160deg,#7a5f3a,#2a2320 70%)"><span class="s">Après</span><div class="t">Repris<br>en 2 h</div><div class="band">POSE · JOUR 3</div></div>
+      </div></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">2B</span><h3>Étincelle</h3><span class="reco">Recommandé</span></div>
+        <p class="pitch">Votre photo en plein cadre, assombrie, un bandeau noir en bas, quelques mots en capitales condensées. C'est le format qui retient le mieux sur Reels, parce qu'il montre la matière dès la première image.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Il faut une photo par post : prévoir 10 min de prises de vue par semaine</div>
+          <div>Le gabarit SVG devient un calque posé sur votre image</div>
+          <div>Les miniatures deviennent excellentes, les carrousels texte un peu moins</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+        <p class="garde">Sans photo disponible, le QG doit pouvoir retomber sur un fond uni. À prévoir dans le gabarit.</p>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="2" data-ref="2C" aria-pressed="false">
+      <div class="vign"><div class="mk">
+        <div class="p1 mk-mat"><span class="s">Matière</span><div class="t">Acier brut,<br>fini brossé</div><div class="r"></div></div>
+        <div class="p2 mk-mat" style="background:repeating-linear-gradient(97deg,#6d6f72,#6d6f72 3px,#5e6063 3px,#5e6063 6px)"><span class="s">Finition</span><div class="t" style="font-size:11px">Trois passes</div><div class="r"></div></div>
+      </div></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">2C</span><h3>Matière</h3></div>
+        <p class="pitch">Le fond est la matière elle-même : acier brossé, bois, oxydation. Typographie grasse par-dessus, accent laiton. Très identitaire, mais plus dur à garder lisible.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Demande une banque de 6 à 8 textures photographiées une fois pour toutes</div>
+          <div>Le contraste du texte doit être vérifié à chaque fond : ombre portée obligatoire</div>
+          <div>Fonctionne aussi bien en carrousel qu'en miniature</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="2" data-ref="2D" aria-pressed="false">
+      <div class="vign"><div class="mk">
+        <div class="p1 mk-cart"><span class="s">REP. 01</span><div class="t">TOLE 3MM<br>PLIAGE 90°</div><div class="box">ÉCH. 1:5</div></div>
+        <div class="p2 mk-cart"><span class="s">REP. 02</span><div class="t">SOUDURE<br>MIG 0,8</div><div class="box">A = 4 MM</div></div>
+      </div></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">2D</span><h3>Cartouche</h3></div>
+        <p class="pitch">Tout en monospace, fond nuit, cadres de cotation, repères et échelles. On dirait un plan DWG exporté. Très distinctif dans un fil saturé de photos.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Une seule police, une seule couleur : le gabarit le plus simple à tenir</div>
+          <div>Parle aux pros, moins au grand public qui cherche un artisan</div>
+          <div>Excellent pour les posts « décodeur » et les fiches techniques</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b></b><b></b><b></b></i></span></div>
+        <p class="garde">Risque de ressembler à un document interne plutôt qu'à une vitrine. À réserver à un pilier, pas à toute la semaine.</p>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ===== PLANCHE 3 ===== -->
+<section class="planche">
+  <div class="ph"><div class="no">03</div><div>
+    <span class="cat">Planche 3 sur 5 · le cerveau</span>
+    <h2>Qui écrit réellement les textes ?</h2>
+    <p class="q">Le QG sait travailler avec trois cerveaux, et le contrôle de marque s'applique dans tous les cas. La question n'est pas la qualité brute, mais ce que vous acceptez de payer et de laisser sortir de chez vous.</p>
+  </div></div>
+  <div class="grille">
+
+    <button class="fiche" data-pl="3" data-ref="3A" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <rect x="30" y="34" width="76" height="64" rx="6" fill="none" stroke="var(--oxyde)" stroke-width="2.5"/>
+        <g stroke="var(--pale)" stroke-width="2"><path d="M42 52 H94 M42 64 H86 M42 76 H94"/></g>
+        <path d="M112 66 H152" stroke="var(--encre)" stroke-width="2.5" marker-end="url(#f3)"/>
+        <defs><marker id="f3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10z" fill="var(--encre)"/></marker></defs>
+        <rect x="160" y="46" width="52" height="40" rx="6" fill="var(--encre)"/>
+        <text x="186" y="71" text-anchor="middle" font-family="Chivo, sans-serif" font-size="13" font-weight="800" fill="var(--planche)">TXT</text>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">aucun réseau · 0 €</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">3A</span><h3>Gabarits seuls</h3></div>
+        <p class="pitch">Le réglage d'origine. Les textes sortent des gabarits de votre couche de connaissance. Hors ligne, gratuit, instantané, parfaitement prévisible — et un peu raide.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>QG_CERVEAU=modeles</code> — rien à installer</div>
+          <div>La qualité dépend entièrement de vos gabarits : vous écrivez une fois, bien</div>
+          <div>Aucune donnée ne quitte votre machine</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="3" data-ref="3B" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <rect x="56" y="32" width="128" height="68" rx="8" fill="none" stroke="var(--oxyde)" stroke-width="2.5"/>
+        <rect x="76" y="50" width="88" height="32" rx="4" fill="var(--oxyde)" opacity=".2"/>
+        <g fill="var(--oxyde)"><circle cx="92" cy="66" r="4"/><circle cx="110" cy="66" r="4"/><circle cx="128" cy="66" r="4"/><circle cx="146" cy="66" r="4"/></g>
+        <path d="M100 100 V110 H140 V100" fill="none" stroke="var(--pale)" stroke-width="2"/>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">votre machine · hors ligne</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">3B</span><h3>Ollama en local</h3></div>
+        <p class="pitch">Un modèle qui tourne sur votre poste. Textes plus naturels que les gabarits, toujours aucune donnée qui sort, mais il faut une machine qui suive et du temps de génération.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>QG_CERVEAU=ollama</code> + <code>ollama pull mistral</code></div>
+          <div>Compter 3 à 10 s par texte : <code>qg semaine</code> passe de 2 s à 2 min</div>
+          <div>Si Ollama est éteint, le QG retombe sur les gabarits sans s'arrêter</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="3" data-ref="3C" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <circle cx="120" cy="64" r="30" fill="none" stroke="var(--laiton)" stroke-width="3"/>
+        <g stroke="var(--laiton)" stroke-width="2.5">
+          <path d="M120 22 V34 M120 94 V106 M78 64 H90 M150 64 H162"/>
+          <path d="M90 34 L99 43 M150 34 L141 43 M90 94 L99 85 M150 94 L141 85"/>
+        </g>
+        <circle cx="120" cy="64" r="11" fill="var(--laiton)"/>
+        <text x="120" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">en ligne · votre abonnement</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">3C</span><h3>Claude Code</h3></div>
+        <p class="pitch">Le QG appelle Claude en ligne de commande. Les meilleurs textes des trois, au prix d'une dépendance au réseau et d'un passage de votre contenu par un service externe.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>QG_CERVEAU=claude</code> — rien d'autre à installer</div>
+          <div>Vos accroches, scripts et légendes transitent par le service</div>
+          <div>Jamais vos clés ni vos prospects : seul le texte à écrire est envoyé</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="3" data-ref="3D" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <rect x="22" y="40" width="72" height="52" rx="6" fill="none" stroke="var(--pale)" stroke-width="2.5"/>
+        <text x="58" y="70" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--pale)">structure</text>
+        <text x="58" y="82" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--pale)">gabarits</text>
+        <rect x="146" y="40" width="72" height="52" rx="6" fill="none" stroke="var(--laiton)" stroke-width="3"/>
+        <text x="182" y="70" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--laiton)">accroches</text>
+        <text x="182" y="82" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--laiton)">Claude</text>
+        <path d="M100 66 H140" stroke="var(--encre)" stroke-width="2.5"/>
+        <text x="120" y="122" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">3 s de réseau par semaine</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">3D</span><h3>Hybride</h3><span class="reco">Recommandé</span></div>
+        <p class="pitch">Les gabarits écrivent scripts et légendes, dont la forme est stable. Claude n'écrit que les accroches, les trois secondes qui décident de tout. Le meilleur rapport entre coût, vitesse et effet.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Un réglage par agent plutôt qu'un réglage global : à ajouter</div>
+          <div>14 appels par semaine au lieu de 42 : coût et temps divisés par trois</div>
+          <div>Les accroches sont justement ce que <code>qg notes</code> sait classer ensuite</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+        <p class="garde">Demande une petite évolution du code : aujourd'hui le cerveau est choisi globalement, pas agent par agent.</p>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ===== PLANCHE 4 ===== -->
+<section class="planche">
+  <div class="ph"><div class="no">04</div><div>
+    <span class="cat">Planche 4 sur 5 · cadence</span>
+    <h2>Combien de posts par semaine ?</h2>
+    <p class="q">Le QG écrit autant que vous voulez : c'est une ligne dans <code>objectifs.md</code>. Le facteur limitant n'est pas l'écriture, c'est le tournage et votre relecture. Chaque vignette montre une semaine type.</p>
+  </div></div>
+  <div class="grille">
+
+    <button class="fiche" data-pl="4" data-ref="4A" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--pale)" text-anchor="middle">
+          <text x="34" y="30">L</text><text x="63" y="30">M</text><text x="92" y="30">M</text><text x="121" y="30">J</text><text x="150" y="30">V</text><text x="179" y="30">S</text><text x="208" y="30">D</text>
+        </g>
+        <g fill="var(--oxyde)">
+          <rect x="22" y="38" width="24" height="26" rx="3"/><rect x="51" y="38" width="24" height="26" rx="3"/>
+          <rect x="80" y="38" width="24" height="26" rx="3"/><rect x="109" y="38" width="24" height="26" rx="3"/>
+          <rect x="138" y="38" width="24" height="26" rx="3"/><rect x="167" y="38" width="24" height="26" rx="3"/>
+          <rect x="196" y="38" width="24" height="26" rx="3"/>
+          <rect x="22" y="68" width="24" height="26" rx="3"/><rect x="51" y="68" width="24" height="26" rx="3"/>
+          <rect x="80" y="68" width="24" height="26" rx="3"/><rect x="109" y="68" width="24" height="26" rx="3"/>
+          <rect x="138" y="68" width="24" height="26" rx="3"/><rect x="167" y="68" width="24" height="26" rx="3"/>
+          <rect x="196" y="68" width="24" height="26" rx="3"/>
+        </g>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">14 posts · 2 par jour</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">4A</span><h3>Deux par jour</h3></div>
+        <p class="pitch">Le réglage livré. Quatorze posts par semaine : c'est le rythme qui fait monter un compte le plus vite, et celui qui épuise le plus vite un artisan qui a un atelier à tenir.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>Posts par semaine : 14</code> dans <code>objectifs.md</code></div>
+          <div>Il faut vider la banque d'idées chaque semaine : 14 sujets d'avance</div>
+          <div>Relecture : 20 à 30 min de votre temps le lundi</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="4" data-ref="4B" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--pale)" text-anchor="middle">
+          <text x="34" y="30">L</text><text x="63" y="30">M</text><text x="92" y="30">M</text><text x="121" y="30">J</text><text x="150" y="30">V</text><text x="179" y="30">S</text><text x="208" y="30">D</text>
+        </g>
+        <g fill="var(--oxyde)">
+          <rect x="22" y="38" width="24" height="26" rx="3"/><rect x="51" y="38" width="24" height="26" rx="3"/>
+          <rect x="80" y="38" width="24" height="26" rx="3"/><rect x="109" y="38" width="24" height="26" rx="3"/>
+          <rect x="138" y="38" width="24" height="26" rx="3"/><rect x="167" y="38" width="24" height="26" rx="3"/>
+          <rect x="196" y="38" width="24" height="26" rx="3"/>
+        </g>
+        <g fill="none" stroke="var(--trait)" stroke-width="1.5" stroke-dasharray="3 3">
+          <rect x="22" y="68" width="24" height="26" rx="3"/><rect x="51" y="68" width="24" height="26" rx="3"/>
+          <rect x="80" y="68" width="24" height="26" rx="3"/><rect x="109" y="68" width="24" height="26" rx="3"/>
+          <rect x="138" y="68" width="24" height="26" rx="3"/><rect x="167" y="68" width="24" height="26" rx="3"/>
+          <rect x="196" y="68" width="24" height="26" rx="3"/>
+        </g>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">7 posts · 1 par jour</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">4B</span><h3>Un par jour</h3><span class="reco">Recommandé</span></div>
+        <p class="pitch">Sept par semaine. Assez pour que les plateformes vous considèrent comme régulier et pour que <code>qg notes</code> ait de la matière à classer, assez peu pour tenir un an sans y penser.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>Posts par semaine : 7</code> — tous à 07:30, un seul créneau</div>
+          <div>Une séance de tournage de 2 h le dimanche suffit à alimenter la semaine</div>
+          <div>Relecture : 10 min le lundi</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="4" data-ref="4C" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--pale)" text-anchor="middle">
+          <text x="34" y="30">L</text><text x="63" y="30">M</text><text x="92" y="30">M</text><text x="121" y="30">J</text><text x="150" y="30">V</text><text x="179" y="30">S</text><text x="208" y="30">D</text>
+        </g>
+        <g fill="var(--oxyde)">
+          <rect x="22" y="38" width="24" height="26" rx="3"/><rect x="51" y="38" width="24" height="26" rx="3"/>
+          <rect x="80" y="38" width="24" height="26" rx="3"/><rect x="109" y="38" width="24" height="26" rx="3"/>
+          <rect x="138" y="38" width="24" height="26" rx="3"/>
+        </g>
+        <rect x="196" y="38" width="24" height="56" rx="3" fill="var(--laiton)"/>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">5 courts + 1 long le dimanche</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">4C</span><h3>Cinq ouvrés, un long</h3></div>
+        <p class="pitch">Cinq courts du lundi au vendredi, et le dimanche une vidéo longue — un chantier filmé du début à la fin — que le découpeur retaille ensuite en clips pour la semaine suivante.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>La vidéo du dimanche alimente <code>qg decouper</code> : 1 tournage, 6 posts</div>
+          <div>Deux formats à tenir, donc deux gabarits visuels</div>
+          <div>C'est le réglage le plus rentable en temps de tournage</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="4" data-ref="4D" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="8" fill="var(--pale)" text-anchor="middle">
+          <text x="34" y="30">L</text><text x="63" y="30">M</text><text x="92" y="30">M</text><text x="121" y="30">J</text><text x="150" y="30">V</text><text x="179" y="30">S</text><text x="208" y="30">D</text>
+        </g>
+        <g fill="var(--oxyde)">
+          <rect x="22" y="38" width="24" height="42" rx="3"/>
+          <rect x="109" y="38" width="24" height="42" rx="3"/>
+          <rect x="196" y="38" width="24" height="42" rx="3"/>
+        </g>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">3 posts très soignés</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">4D</span><h3>Trois, très soignés</h3></div>
+        <p class="pitch">Lundi, jeudi, dimanche. Chaque post reçoit le temps qu'il mérite : tournage propre, montage, voix off. Moins de portée, mais une image d'artisan qui soigne tout, jusqu'à ses vidéos.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div><code>Posts par semaine : 3</code> — la banque d'idées tient un mois</div>
+          <div>Le classement d'accroches met 3 à 4 fois plus longtemps à être fiable</div>
+          <div>La voix off et les plans de coupe deviennent rentables</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+        <p class="garde">En dessous de 3 par semaine, l'attribution ne distingue plus rien : trop peu de données pour comparer les accroches.</p>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ===== PLANCHE 5 ===== -->
+<section class="planche">
+  <div class="ph"><div class="no">05</div><div>
+    <span class="cat">Planche 5 sur 5 · ce qu'on vend</span>
+    <h2>Qu'y a-t-il au bout du lien ?</h2>
+    <p class="q">Tout le QG converge vers un lien suivi. Ce qu'il y a derrière décide de ce que l'attribution peut mesurer : une vente Shopify se compte toute seule, un devis signé trois semaines plus tard, non.</p>
+  </div></div>
+  <div class="grille">
+
+    <button class="fiche" data-pl="5" data-ref="5A" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <rect x="62" y="24" width="116" height="76" rx="6" fill="var(--planche)" stroke="var(--oxyde)" stroke-width="2.5"/>
+        <g stroke="var(--trait)" stroke-width="2"><path d="M76 44 H164 M76 58 H164 M76 72 H132"/></g>
+        <rect x="76" y="82" width="52" height="10" rx="5" fill="var(--laiton)"/>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">formulaire · mesures · rappel</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">5A</span><h3>Devis sur mesure</h3></div>
+        <p class="pitch">Le lien mène à un formulaire : type d'ouvrage, mesures, photos, code postal. Panier le plus élevé de la planche, mais le cycle de décision est long et la mesure imprécise.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>L'attribution s'arrête au formulaire : le QG compte des demandes, pas des euros</div>
+          <div>Le marqueur de prospects devient l'indicateur principal</div>
+          <div>Les réponses automatiques ne peuvent jamais annoncer de prix ferme</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="5" data-ref="5B" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <rect x="52" y="24" width="136" height="78" rx="6" fill="var(--planche)" stroke="var(--oxyde)" stroke-width="2.5"/>
+        <path d="M52 44 H188" stroke="var(--oxyde)" stroke-width="2.5"/>
+        <g fill="var(--trait)">
+          <rect x="66" y="56" width="18" height="14" rx="2"/><rect x="92" y="56" width="18" height="14" rx="2"/>
+          <rect x="118" y="56" width="18" height="14" rx="2"/><rect x="144" y="56" width="18" height="14" rx="2"/>
+          <rect x="66" y="76" width="18" height="14" rx="2"/><rect x="92" y="76" width="18" height="14" rx="2"/>
+        </g>
+        <g fill="var(--laiton)"><rect x="118" y="76" width="18" height="14" rx="2"/><rect x="144" y="76" width="18" height="14" rx="2"/></g>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">dates fixes · places limitées</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">5B</span><h3>Stage à date fixe</h3><span class="reco">Recommandé</span></div>
+        <p class="pitch">Une journée, un lieu, huit places. Prix unique, donc annonçable par le QG sans risque. L'urgence est réelle et vérifiable : « il reste 4 places » est un fait, pas un argument de vente.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Un prix ferme dans <code>tarifs.md</code> : les réponses prospects deviennent utiles</div>
+          <div>Le paiement en ligne rend l'attribution exacte, du post à l'euro</div>
+          <div>Le pilier « Offre » a de quoi dire chaque semaine : les dates bougent</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="5" data-ref="5C" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g fill="none" stroke="var(--oxyde)" stroke-width="2.5">
+          <path d="M72 46 h96 l10 54 H62 z"/><path d="M98 46 V36 a22 22 0 0 1 44 0 v10"/>
+        </g>
+        <circle cx="120" cy="74" r="12" fill="var(--laiton)"/>
+        <text x="120" y="118" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">pièces · kits · expédition</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">5C</span><h3>Produits en boutique</h3></div>
+        <p class="pitch">Pièces finies, kits, accessoires. Paiement immédiat, attribution parfaite, mais il faut du stock, de l'emballage et un service après-vente — c'est-à-dire du temps d'atelier en moins.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Shopify branché dès l'étape 24 : c'est lui qui donne tous les chiffres</div>
+          <div>Les plaintes arrivent vraiment (colis, délais) : elles vous remontent toutes</div>
+          <div>Le pilier « Coulisses » s'écrit tout seul : préparation des commandes</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b class="on"></b><b class="on"></b><b class="on"></b></i></span></div>
+      </div>
+    </button>
+
+    <button class="fiche" data-pl="5" data-ref="5D" aria-pressed="false">
+      <div class="vign"><svg viewBox="0 0 240 132" aria-hidden="true">
+        <rect width="240" height="132" fill="var(--rail)"/>
+        <g fill="none" stroke="var(--oxyde)" stroke-width="2.5">
+          <path d="M80 28 h52 l28 26 v48 H80 z"/><path d="M132 28 v26 h28"/>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--laiton)" font-weight="600">
+          <text x="94" y="74">STEP</text><text x="94" y="90">DXF</text>
+        </g>
+        <path d="M120 104 V116 M112 110 L120 118 L128 110" stroke="var(--encre)" stroke-width="2.5" fill="none"/>
+        <text x="190" y="122" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--pale)">fichiers · marge totale</text>
+      </svg></div>
+      <div class="corps">
+        <div class="hd"><span class="ref">5D</span><h3>Plans et fichiers</h3></div>
+        <p class="pitch">Vos STEP, DXF et STL en téléchargement. Aucun stock, aucune expédition, marge quasi totale, vente mondiale. Mais un fichier se copie : le prix unitaire reste bas.</p>
+        <div class="chg"><b>Ce que ça change dans le QG</b>
+          <div>Le pilier « Technique » devient aussi un argument de vente direct</div>
+          <div>Aucune logistique : la catégorie « plaintes » se vide presque</div>
+          <div>Excellent complément d'une autre offre, rarement suffisant seul</div>
+        </div>
+        <div class="pied"><span class="eff">Effort <i><b class="on"></b><b></b><b></b><b></b></i></span></div>
+      </div>
+    </button>
+  </div>
+</section>
+
+<section class="fin">
+  <h2>Ce que je fais de votre sélection</h2>
+  <p>Chaque choix se traduit par des modifications précises, presque toutes en Markdown dans <code>connaissance/</code>. Donnez-moi les cinq références et je m'en charge.</p>
+  <ol>
+    <li><b>Planche 1</b> → je réécris le vocabulaire de niche, les piliers et les points de douleur pour votre métier.</li>
+    <li><b>Planche 2</b> → je refais le gabarit SVG des carrousels et des miniatures, et je vous montre les six pages d'un vrai post.</li>
+    <li><b>Planche 3</b> → je règle le cerveau, et si vous prenez l'hybride j'ajoute le choix par agent dans le code.</li>
+    <li><b>Planche 4</b> → une ligne dans <code>objectifs.md</code>, plus les créneaux par plateforme.</li>
+    <li><b>Planche 5</b> → je réécris l'offre, les tarifs, la FAQ et les scripts de réponse aux prospects.</li>
+  </ol>
+</section>
+</div>
+
+<div class="barre">
+  <div class="in">
+    <span class="lib">Votre sélection</span>
+    <span class="sel" id="sel" aria-live="polite">aucune planche tranchée</span>
+    <button type="button" id="copier" disabled>Copier</button>
+    <button type="button" id="reco" class="p">Prendre les recommandations</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CLE = "legion-plaquettes-v1";
+  var RECO = {1: "1A", 2: "2B", 3: "3D", 4: "4B", 5: "5B"};
+  var choix = {};
+  var fiches = Array.prototype.slice.call(document.querySelectorAll(".fiche"));
+  var sel = document.getElementById("sel");
+  var copier = document.getElementById("copier");
+
+  try {
+    var gard = localStorage.getItem(CLE);
+    if (gard) choix = JSON.parse(gard) || {};
+  } catch (e) { choix = {}; }
+
+  function texte() {
+    var refs = [];
+    for (var p = 1; p <= 5; p++) if (choix[p]) refs.push(choix[p]);
+    return refs.join(" · ");
+  }
+
+  function peindre() {
+    fiches.forEach(function (f) {
+      f.setAttribute("aria-pressed", choix[f.dataset.pl] === f.dataset.ref ? "true" : "false");
+    });
+    var n = Object.keys(choix).length;
+    sel.textContent = n === 0 ? "aucune planche tranchée"
+      : texte() + (n < 5 ? "   (" + (5 - n) + " à trancher)" : "   — complet");
+    copier.disabled = n === 0;
+    copier.textContent = "Copier";
+    try { localStorage.setItem(CLE, JSON.stringify(choix)); } catch (e) {}
+  }
+
+  fiches.forEach(function (f) {
+    f.addEventListener("click", function () {
+      var p = f.dataset.pl;
+      choix[p] = (choix[p] === f.dataset.ref) ? undefined : f.dataset.ref;
+      if (!choix[p]) delete choix[p];
+      peindre();
+    });
+  });
+
+  document.getElementById("reco").addEventListener("click", function () {
+    choix = Object.assign({}, RECO);
+    peindre();
+    var premier = document.querySelector('.fiche[data-ref="1A"]');
+    if (premier) premier.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center"});
+  });
+
+  copier.addEventListener("click", function () {
+    var t = "Opération Légion, ma sélection : " + texte();
+    var fini = function (ok) {
+      copier.textContent = ok ? "Copié" : "Sélectionnez puis copiez";
+      setTimeout(function () { copier.textContent = "Copier"; }, 2200);
+    };
+    try {
+      navigator.clipboard.writeText(t).then(function () { fini(true); }, function () { fini(false); });
+    } catch (e) { fini(false); }
+  });
+
+  peindre();
+})();
+</script>

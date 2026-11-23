@@ -1,0 +1,906 @@
+<title>Mise en route de la Légion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Mise en page : dossier de montage d'atelier. Fond papier millimétré, cartouche de plan en tête,
+   25 fiches numérotées à filet latéral, schémas au trait, blocs de terminal sombres. */
+:root{
+  --papier:#eef0f3; --carte:#ffffff; --encre:#141a21; --encre-2:#43505e; --pale:#7b8894;
+  --filet:#ccd3da; --grille:#dde2e8; --bleu:#1f5c96; --cyan:#2a9bb5; --orange:#d2601a;
+  --vert:#2f7d4f; --rouge:#b3291e; --sombre:#121820; --sombre-2:#1b2430; --sur-sombre:#c6d2de;
+  --titre:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --texte:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ombre:0 1px 2px rgba(20,26,33,.06),0 8px 24px rgba(20,26,33,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --papier:#0e141b; --carte:#161e27; --encre:#e7edf3; --encre-2:#aab8c6; --pale:#7d8b99;
+  --filet:#2a3644; --grille:#1a222c; --bleu:#6fb3e8; --cyan:#4cc5e0; --orange:#f08a44;
+  --vert:#5cc184; --rouge:#f0776a; --sombre:#060a0f; --sombre-2:#101821; --sur-sombre:#c6d2de;
+  --ombre:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --papier:#0e141b; --carte:#161e27; --encre:#e7edf3; --encre-2:#aab8c6; --pale:#7d8b99;
+  --filet:#2a3644; --grille:#1a222c; --bleu:#6fb3e8; --cyan:#4cc5e0; --orange:#f08a44;
+  --vert:#5cc184; --rouge:#f0776a; --sombre:#060a0f; --sombre-2:#101821; --sur-sombre:#c6d2de;
+  --ombre:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:
+  linear-gradient(var(--grille) 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,var(--grille) 1px,transparent 1px) 0 0/28px 100%,
+  var(--papier);
+  color:var(--encre);font:16px/1.6 var(--texte);-webkit-text-size-adjust:100%}
+.page{max-width:1180px;overflow-x:clip;margin-inline:auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 96px}
+h1,h2,h3,h4,p,ul,ol,figure{margin:0}
+ul,ol{padding-left:1.25em}
+a{color:var(--bleu)}
+:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+code{font:500 .9em var(--mono);background:color-mix(in srgb,var(--bleu) 12%,transparent);
+  padding:.12em .36em;border-radius:4px;overflow-wrap:anywhere}
+
+/* ---- cartouche de plan ---- */
+.cartouche{margin-top:-env(safe-area-inset-top,0px);background:var(--sombre);color:var(--sur-sombre);
+  border:1px solid var(--filet);border-radius:14px;overflow:hidden;margin-block:22px 30px;box-shadow:var(--ombre)}
+.cartouche .haut{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;padding:26px 24px 18px}
+.cartouche h1{font:800 clamp(30px,6vw,56px)/1.02 var(--titre);letter-spacing:-.02em;color:#fff;text-wrap:balance}
+.cartouche .st{font:500 13px var(--mono);color:var(--cyan);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+.cartouche p{color:#9eadbd;max-width:62ch;margin-top:10px;font-size:15px}
+.tampon{border:2px solid var(--orange);color:var(--orange);border-radius:8px;padding:8px 12px;
+  font:700 11px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;transform:rotate(-3deg);text-align:center;white-space:nowrap}
+.cartouche .bas{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  border-top:1px solid #2a3644}
+.cartouche .bas div{padding:12px 16px;border-right:1px solid #2a3644;min-width:0}
+.cartouche .bas div:last-child{border-right:0}
+.cartouche .bas b{display:block;font:600 15px var(--titre);color:#fff}
+.cartouche .bas small{font:500 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#7d8b99}
+
+/* ---- sommaire des phases ---- */
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:34px}
+.ph{background:var(--carte);border:1px solid var(--filet);border-radius:10px;padding:14px;
+  display:flex;flex-direction:column;gap:8px;min-width:0;border-top:3px solid var(--c)}
+.ph b{font:700 14px var(--titre)}
+.ph small{font:500 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--pale)}
+.ph .pts{display:flex;gap:4px;flex-wrap:wrap}
+.ph .pts i{width:18px;height:18px;border-radius:50%;background:color-mix(in srgb,var(--c) 16%,transparent);
+  color:var(--c);font:600 9px/18px var(--mono);font-style:normal;text-align:center}
+.ph span{font-size:12.5px;color:var(--encre-2)}
+
+/* ---- sections ---- */
+.bande{display:flex;gap:14px;align-items:baseline;margin:46px 0 18px;padding-bottom:10px;border-bottom:2px solid var(--encre)}
+.bande b{font:800 clamp(20px,3.4vw,30px)/1.1 var(--titre);letter-spacing:-.01em}
+.bande small{font:500 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--pale);margin-left:auto;white-space:nowrap}
+.bande em{font-style:normal;font:700 13px var(--mono);color:var(--c)}
+
+/* ---- fiche d'étape ---- */
+.fiche{background:var(--carte);border:1px solid var(--filet);border-left:4px solid var(--c);
+  border-radius:0 10px 10px 0;box-shadow:var(--ombre);margin-bottom:14px;overflow:hidden}
+.fh{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;
+  border-bottom:1px solid var(--filet);background:linear-gradient(var(--carte),color-mix(in srgb,var(--papier) 55%,var(--carte)))}
+.num{width:42px;height:42px;flex:none;border-radius:8px;background:var(--encre);color:var(--papier);
+  display:grid;place-items:center;font:700 17px var(--mono);font-variant-numeric:tabular-nums}
+.fh h3{font:700 clamp(16px,2.4vw,19px)/1.25 var(--titre);text-wrap:balance}
+.fh .meta{font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--pale);margin-top:3px}
+.duree{font:600 11px var(--mono);border:1px solid var(--filet);border-radius:99px;padding:4px 9px;color:var(--encre-2);white-space:nowrap}
+.fc{padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.fc>*{min-width:0;max-width:100%}
+.fc p{color:var(--encre-2);max-width:72ch}
+.fc p strong{color:var(--encre)}
+.fc h4{font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--pale)}
+
+/* ---- blocs ---- */
+.term{background:var(--sombre);color:var(--sur-sombre);border-radius:9px;padding:13px 14px;overflow-x:auto;
+  font:400 13px/1.75 var(--mono);white-space:pre;border:1px solid var(--filet)}
+.term .c{color:#6b7a8a}
+.term .p{color:var(--cyan)}
+.term .k{color:#e8eef5;font-weight:600}
+.term .v{color:var(--vert)}
+.term .w{color:var(--orange)}
+.sortie{background:color-mix(in srgb,var(--bleu) 7%,var(--carte));border:1px dashed var(--filet);
+  border-left:3px solid var(--bleu);border-radius:0 8px 8px 0;padding:11px 13px;overflow-x:auto;
+  font:400 12.5px/1.7 var(--mono);white-space:pre;color:var(--encre-2)}
+.fichier{border:1px solid var(--filet);border-radius:9px;overflow:hidden}
+.fichier .nom{background:color-mix(in srgb,var(--encre) 6%,var(--carte));padding:7px 12px;
+  font:600 11.5px var(--mono);color:var(--encre-2);border-bottom:1px solid var(--filet);
+  display:flex;gap:8px;align-items:center}
+.fichier .nom::before{content:"";width:8px;height:10px;border-radius:1px;background:var(--cyan);flex:none}
+.fichier pre{margin:0;padding:12px;overflow-x:auto;font:400 12.5px/1.7 var(--mono);white-space:pre;color:var(--encre)}
+.note{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:11px 13px;border-radius:8px;font-size:13.5px;
+  background:color-mix(in srgb,var(--n) 11%,transparent);border:1px solid color-mix(in srgb,var(--n) 32%,transparent)}
+.note i{font-style:normal;font-weight:700;color:var(--n);font-size:15px;line-height:1.4}
+.note b{color:var(--n)}
+.note.att{--n:var(--orange)}.note.stop{--n:var(--rouge)}.note.ok{--n:var(--vert)}.note.inf{--n:var(--bleu)}
+.cases{display:grid;gap:7px;padding:12px;border:1px solid var(--filet);border-radius:9px;
+  background:color-mix(in srgb,var(--vert) 6%,transparent)}
+.cases div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;font-size:13.5px;align-items:start}
+.cases div::before{content:"";width:15px;height:15px;margin-top:3px;border:2px solid var(--vert);border-radius:3px;flex:none}
+.cases h4{color:var(--vert)}
+.deux{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+figure{border:1px solid var(--filet);border-radius:10px;background:var(--carte);padding:14px;overflow-x:auto;min-width:0;max-width:100%}
+figure svg{display:block;width:100%;height:auto;min-width:440px;max-width:100%}
+figcaption{font:500 11.5px var(--mono);color:var(--pale);margin-top:10px;letter-spacing:.04em}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:380px}
+.tbl{overflow-x:auto;border:1px solid var(--filet);border-radius:9px}
+th{text-align:left;font:600 9.5px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--pale);
+  padding:9px 11px;border-bottom:1px solid var(--filet);background:color-mix(in srgb,var(--encre) 4%,var(--carte))}
+td{padding:8px 11px;border-bottom:1px solid var(--grille);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td code{font-size:12px}
+.fin{margin-top:44px;background:var(--sombre);color:var(--sur-sombre);border-radius:14px;padding:26px 22px;border:1px solid var(--filet)}
+.fin h2{font:800 26px var(--titre);color:#fff;margin-bottom:8px}
+.fin p{color:#9eadbd;max-width:64ch}
+.fin .g{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:18px}
+.fin .g div{border:1px solid #2a3644;border-radius:9px;padding:12px}
+.fin .g b{display:block;color:var(--cyan);font:600 12px var(--mono);margin-bottom:5px}
+.fin .g span{font-size:13px;color:#9eadbd}
+@media (max-width:560px){
+  .fh{grid-template-columns:auto minmax(0,1fr);row-gap:8px}
+  .duree{grid-column:2;justify-self:start}
+  .cartouche .haut{grid-template-columns:1fr}
+  .tampon{justify-self:start}
+}
+@media (prefers-reduced-motion:no-preference){.fiche{transition:border-color .15s}}
+</style>
+
+<div class="page">
+
+<header class="cartouche">
+  <div class="haut">
+    <div>
+      <div class="st">Opération Légion · dossier de mise en route</div>
+      <h1>Mise en route de la Légion</h1>
+      <p>Vingt-cinq étapes, dans l'ordre, du poste vide au QG qui tourne tout seul la nuit. Chaque étape donne la commande exacte, ce que vous devez voir à l'écran, et le piège à éviter.</p>
+    </div>
+    <div class="tampon">Rien ne part<br>sans vous</div>
+  </div>
+  <div class="bas">
+    <div><small>Étapes</small><b>25 en 5 phases</b></div>
+    <div><small>Temps total</small><b>≈ 4 h 00</b></div>
+    <div><small>Prérequis</small><b>Python 3.11 · ffmpeg</b></div>
+    <div><small>Clés requises</small><b>Aucune (phases 1-4)</b></div>
+    <div><small>Dépôt</small><b>Sanctuary-GCSI / legion</b></div>
+  </div>
+</header>
+
+<section class="phases">
+  <div class="ph" style="--c:var(--bleu)"><small>Phase 1 · 17 min</small><b>Le poste</b><div class="pts"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i></div><span>Outils, dépôt, alias, premier contact, tests.</span></div>
+  <div class="ph" style="--c:var(--cyan)"><small>Phase 2 · 75 min</small><b>La connaissance</b><div class="pts"><i>6</i><i>7</i><i>8</i><i>9</i><i>10</i></div><span>Votre voix, vos interdits, votre offre, votre niche.</span></div>
+  <div class="ph" style="--c:var(--orange)"><small>Phase 3 · 45 min</small><b>Le premier cycle</b><div class="pts"><i>11</i><i>12</i><i>13</i><i>14</i><i>15</i></div><span>Recherche, idées, 14 posts, contrôle, approbation.</span></div>
+  <div class="ph" style="--c:var(--vert)"><small>Phase 4 · 50 min</small><b>Le studio</b><div class="pts"><i>16</i><i>17</i><i>18</i><i>19</i><i>20</i></div><span>Carrousels, découpe, montage 9:16, voix, plans.</span></div>
+  <div class="ph" style="--c:var(--rouge)"><small>Phase 5 · 55 min</small><b>La boucle</b><div class="pts"><i>21</i><i>22</i><i>23</i><i>24</i><i>25</i></div><span>Boîte, argent, branchements, tournée de nuit.</span></div>
+</section>
+
+<figure>
+<svg viewBox="0 0 1000 250" role="img" aria-label="Le cycle du QG : recherche, studio, contrôle de marque, file d'approbation, vous, programme, croissance, et retour à la recherche.">
+  <defs>
+    <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="var(--encre-2)"/>
+    </marker>
+    <marker id="flo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="var(--orange)"/>
+    </marker>
+  </defs>
+  <g font-family="Archivo, sans-serif" font-size="13" font-weight="600" text-anchor="middle">
+    <g>
+      <rect x="14" y="62" width="118" height="54" rx="8" fill="none" stroke="var(--bleu)" stroke-width="2"/>
+      <text x="73" y="84" fill="var(--encre)">Recherche</text>
+      <text x="73" y="102" fill="var(--pale)" font-size="10.5" font-weight="500">8 agents</text>
+    </g>
+    <g>
+      <rect x="176" y="62" width="118" height="54" rx="8" fill="none" stroke="var(--cyan)" stroke-width="2"/>
+      <text x="235" y="84" fill="var(--encre)">Studio</text>
+      <text x="235" y="102" fill="var(--pale)" font-size="10.5" font-weight="500">10 agents</text>
+    </g>
+    <g>
+      <rect x="338" y="52" width="130" height="74" rx="8" fill="color-mix(in srgb, var(--orange) 12%, transparent)" stroke="var(--orange)" stroke-width="2.5"/>
+      <text x="403" y="78" fill="var(--encre)">Contrôle</text>
+      <text x="403" y="94" fill="var(--encre)">de marque</text>
+      <text x="403" y="112" fill="var(--orange)" font-size="10.5" font-weight="700">barrage</text>
+    </g>
+    <g>
+      <rect x="512" y="62" width="118" height="54" rx="8" fill="none" stroke="var(--encre-2)" stroke-width="2"/>
+      <text x="571" y="84" fill="var(--encre)">File</text>
+      <text x="571" y="102" fill="var(--pale)" font-size="10.5" font-weight="500">en attente</text>
+    </g>
+    <g>
+      <rect x="674" y="52" width="118" height="74" rx="8" fill="var(--encre)" stroke="var(--encre)" stroke-width="2"/>
+      <text x="733" y="80" fill="var(--carte)" font-size="15" font-weight="800">VOUS</text>
+      <text x="733" y="100" fill="var(--carte)" font-size="10.5" font-weight="500" opacity=".8">qg valider</text>
+    </g>
+    <g>
+      <rect x="836" y="62" width="130" height="54" rx="8" fill="none" stroke="var(--vert)" stroke-width="2"/>
+      <text x="901" y="84" fill="var(--encre)">Programme</text>
+      <text x="901" y="102" fill="var(--pale)" font-size="10.5" font-weight="500">4 plateformes</text>
+    </g>
+    <g>
+      <rect x="380" y="186" width="240" height="46" rx="8" fill="none" stroke="var(--vert)" stroke-width="2" stroke-dasharray="6 4"/>
+      <text x="500" y="207" fill="var(--encre)">Croissance · revenus par post</text>
+      <text x="500" y="223" fill="var(--pale)" font-size="10.5" font-weight="500">qg entonnoir · qg notes · qg matin</text>
+    </g>
+  </g>
+  <g fill="none" stroke="var(--encre-2)" stroke-width="1.8" marker-end="url(#fl)">
+    <path d="M132 89 H170"/>
+    <path d="M294 89 H332"/>
+    <path d="M468 89 H506"/>
+    <path d="M630 89 H668"/>
+    <path d="M792 89 H830"/>
+  </g>
+  <path d="M901 116 V209 H626" fill="none" stroke="var(--vert)" stroke-width="1.8" marker-end="url(#fl)"/>
+  <path d="M374 209 H73 V122" fill="none" stroke="var(--vert)" stroke-width="1.8" marker-end="url(#fl)"/>
+  <path d="M403 126 V160 H250" fill="none" stroke="var(--orange)" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#flo)"/>
+  <text x="300" y="155" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--orange)" text-anchor="middle">signalé → réécriture</text>
+  <text x="500" y="178" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--vert)" text-anchor="middle">ce qui a rapporté nourrit la recherche suivante</text>
+</svg>
+<figcaption>Fig. 1 — Le cycle complet. Un seul point d'arrêt humain, et un barrage automatique avant lui.</figcaption>
+</figure>
+
+<!-- ================= PHASE 1 ================= -->
+<div class="bande" style="--c:var(--bleu)"><b>Phase 1 · Le poste</b><em>étapes 1 à 5</em><small>17 min · aucune clé</small></div>
+
+<article class="fiche" style="--c:var(--bleu)">
+  <div class="fh"><div class="num">01</div><div><h3>Vérifier les trois outils</h3><div class="meta">Terminal · une seule commande</div></div><span class="duree">3 min</span></div>
+  <div class="fc">
+    <p>Le QG ne demande que <strong>Python 3.11 ou plus</strong> et <strong>ffmpeg</strong>. Git sert à récupérer le dépôt. Tout le reste est facultatif.</p>
+    <div class="term"><span class="p">$</span> <span class="k">python3 --version && ffmpeg -version | head -1 && git --version</span></div>
+    <h4>Ce que vous devez voir</h4>
+    <div class="sortie">Python 3.13.18
+ffmpeg version 6.1.1 Copyright (c) 2000-2023 the FFmpeg developers
+git version 2.43.0</div>
+    <div class="note inf"><i>ℹ</i><div><b>Si ffmpeg manque :</b> <code>sudo apt install ffmpeg</code> (Debian, Ubuntu) ou <code>brew install ffmpeg</code> (macOS). Sans lui, seules les étapes 17 à 19 sont indisponibles ; tout le reste tourne.</div></div>
+    <div class="note stop"><i>✕</i><div><b>Python 3.10 ou moins ne suffit pas.</b> Le QG utilise <code>match</code> et l'opérateur morse <code>:=</code> dans des compréhensions. Vous verriez une <code>SyntaxError</code> dès le lancement.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--bleu)">
+  <div class="fh"><div class="num">02</div><div><h3>Récupérer le dépôt et la bonne branche</h3><div class="meta">Git · branche ccr-7cac94fe-fpfbhi</div></div><span class="duree">4 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="c"># là où vous rangez vos projets</span>
+<span class="p">$</span> <span class="k">git clone https://github.com/estilinguierre/Sanctuary-GCSI.git</span>
+<span class="p">$</span> <span class="k">cd Sanctuary-GCSI</span>
+<span class="p">$</span> <span class="k">git checkout ccr-7cac94fe-fpfbhi</span>
+<span class="p">$</span> <span class="k">cd legion && ls</span></div>
+    <h4>Ce que vous devez voir</h4>
+    <div class="sortie">README.md  connaissance  exemples  n8n  qg  qg.sh  tests</div>
+    <p>Sept entrées, pas une de plus. <code>donnees/</code> n'existe pas encore : il se crée tout seul au premier usage et reste <strong>hors du dépôt</strong> (il contient vos posts et vos prospects).</p>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--bleu)">
+  <div class="fh"><div class="num">03</div><div><h3>Poser l'alias <code>qg</code></h3><div class="meta">Shell · une ligne dans votre profil</div></div><span class="duree">3 min</span></div>
+  <div class="fc">
+    <p>Toutes les commandes du dossier s'écrivent <code>qg …</code>. Deux façons de l'obtenir.</p>
+    <div class="deux">
+      <div>
+        <h4>A · l'alias (recommandé)</h4>
+        <div class="term"><span class="p">$</span> <span class="k">echo "alias qg='python3 -m qg'" >> ~/.bashrc</span>
+<span class="p">$</span> <span class="k">source ~/.bashrc</span>
+<span class="c"># zsh : remplacez .bashrc par .zshrc</span></div>
+      </div>
+      <div>
+        <h4>B · le lanceur fourni</h4>
+        <div class="term"><span class="p">$</span> <span class="k">./qg.sh etat</span>
+<span class="c"># fonctionne sans rien installer,
+# mais il faut être dans legion/</span></div>
+      </div>
+    </div>
+    <div class="note att"><i>⚠</i><div><b>L'alias ne marche que depuis <code>legion/</code>.</b> <code>python3 -m qg</code> cherche le dossier <code>qg/</code> dans le répertoire courant. Pour l'appeler de partout : <code>alias qg='python3 -m qg --help &amp;>/dev/null || cd ~/Sanctuary-GCSI/legion; python3 -m qg'</code>, ou plus simplement travaillez toujours depuis <code>legion/</code>.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--bleu)">
+  <div class="fh"><div class="num">04</div><div><h3>Premier contact : <code>qg etat</code></h3><div class="meta">La commande à connaître par cœur</div></div><span class="duree">5 min</span></div>
+  <div class="fc">
+    <p><code>qg etat</code> répond à la seule question qui compte au départ : <strong>qu'est-ce qui est vraiment branché, et qu'est-ce qui fait semblant ?</strong></p>
+    <div class="term"><span class="p">$</span> <span class="k">qg etat</span></div>
+    <div class="sortie">CERVEAU  modeles  (gabarits de la couche de connaissance, hors ligne)
+
+CONNECTEURS
+Service           État        Variables à poser
+────────────────  ──────────  ────────────────────────────────────
+Telegram          <span style="color:var(--orange)">simulation</span>  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+Shopify           <span style="color:var(--orange)">simulation</span>  SHOPIFY_BOUTIQUE, SHOPIFY_JETON
+Instagram (Meta)  <span style="color:var(--orange)">simulation</span>  META_JETON, META_COMPTE_IG
+n8n               <span style="color:var(--orange)">simulation</span>  N8N_WEBHOOK_PUBLICATION
+Pexels            <span style="color:var(--orange)">simulation</span>  PEXELS_CLE
+ElevenLabs        <span style="color:var(--orange)">simulation</span>  ELEVENLABS_CLE, ELEVENLABS_VOIX</div>
+    <div class="note ok"><i>✓</i><div><b>Six « simulation », c'est l'état normal au démarrage.</b> Rien n'est cassé : le QG tourne entièrement hors ligne sur des données d'exemple. Vous branchez vos comptes à l'étape 24, quand vous saurez déjà ce que le QG produit.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--bleu)">
+  <div class="fh"><div class="num">05</div><div><h3>Faire tourner les 38 tests</h3><div class="meta">Preuve que l'installation est saine</div></div><span class="duree">2 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">python3 tests/test_qg.py</span></div>
+    <div class="sortie">Ran 38 tests in 0.46s
+
+<span style="color:var(--vert)">OK</span></div>
+    <p>Les tests tournent <strong>hors ligne, sans aucune clé</strong>, sur un dossier de données temporaire : ils ne touchent jamais à vos vraies données. Refaites-les après chaque modification de la couche de connaissance (phase 2) : ils vérifient entre autres que le contrôle de marque bloque bien une promesse et un prix inconnu.</p>
+    <div class="note inf"><i>ℹ</i><div>Pour relancer un seul groupe : <code>python3 tests/test_qg.py TestControleDeMarque -v</code></div></div>
+  </div>
+</article>
+
+<!-- ================= PHASE 2 ================= -->
+<div class="bande" style="--c:var(--cyan)"><b>Phase 2 · La connaissance</b><em>étapes 6 à 10</em><small>75 min · la phase qui compte vraiment</small></div>
+
+<div class="note att" style="margin-bottom:16px"><i>⚠</i><div><b>C'est ici que tout se joue.</b> Les cinq étapes qui suivent décident de la qualité de tout ce que le QG écrira ensuite. Un dossier <code>connaissance/</code> bâclé donne des posts génériques ; une heure passée ici vaut dix heures de corrections plus tard. Aucune ligne de code n'est touchée : uniquement du Markdown.</div></div>
+
+<figure>
+<svg viewBox="0 0 1000 300" role="img" aria-label="Les huit dossiers de la couche de connaissance et les agents qui les lisent ou les écrivent.">
+  <g font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="500">
+    <rect x="14" y="14" width="300" height="272" rx="10" fill="color-mix(in srgb, var(--cyan) 8%, transparent)" stroke="var(--cyan)" stroke-width="1.6"/>
+    <text x="30" y="38" font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--encre)">connaissance/ — ce que vous écrivez</text>
+    <g fill="var(--encre)">
+      <text x="30" y="66">voix/ guide, mots interdits, ton</text>
+      <text x="30" y="92">offre/ offre, tarifs, FAQ</text>
+      <text x="30" y="118">contenu/ piliers, modèles, scripts</text>
+      <text x="30" y="144">plateformes/ 4 fiches de règles</text>
+      <text x="30" y="170">public/ profils, questions, douleurs</text>
+      <text x="30" y="196">accroches/ bibliothèque, analyses</text>
+      <text x="30" y="222">communaute/ réponses, étiquettes</text>
+      <text x="30" y="248">rapports/ indicateurs, attribution</text>
+      <text x="30" y="274" fill="var(--pale)">objectifs.md — cibles et budget</text>
+    </g>
+    <g fill="var(--cyan)">
+      <circle cx="21" cy="62" r="3"/><circle cx="21" cy="88" r="3"/><circle cx="21" cy="114" r="3"/><circle cx="21" cy="140" r="3"/>
+      <circle cx="21" cy="166" r="3"/><circle cx="21" cy="192" r="3"/><circle cx="21" cy="218" r="3"/><circle cx="21" cy="244" r="3"/>
+    </g>
+    <rect x="690" y="14" width="296" height="272" rx="10" fill="none" stroke="var(--filet)" stroke-width="1.6"/>
+    <text x="706" y="38" font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="var(--encre)">Les 33 agents</text>
+    <g fill="var(--encre-2)">
+      <text x="706" y="68">Rédacteur d'accroches → voix + accroches</text>
+      <text x="706" y="94">Scénariste → contenu + voix</text>
+      <text x="706" y="120">Contrôle de marque → voix + tarifs</text>
+      <text x="706" y="146">Réponses publiques → FAQ + scripts</text>
+      <text x="706" y="172">Marqueur de prospects → étiquettes</text>
+      <text x="706" y="198">Multi-plateformes → plateformes/</text>
+      <text x="706" y="224">Suivi des revenus → attribution</text>
+      <text x="706" y="250">Résumé du matin → rapports/</text>
+      <text x="706" y="276" fill="var(--pale)">… et 25 autres</text>
+    </g>
+    <path d="M318 120 H560" stroke="var(--cyan)" stroke-width="2" fill="none" marker-end="url(#fl)"/>
+    <text x="439" y="110" text-anchor="middle" fill="var(--cyan)" font-weight="600">lecture à chaque appel</text>
+    <path d="M686 200 H568" stroke="var(--vert)" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#fl)"/>
+    <text x="620" y="190" text-anchor="middle" fill="var(--vert)" font-weight="600">écriture</text>
+    <rect x="560" y="86" width="122" height="150" rx="9" fill="var(--encre)"/>
+    <text x="621" y="150" text-anchor="middle" fill="var(--carte)" font-family="Archivo, sans-serif" font-size="15" font-weight="800">QG</text>
+    <text x="621" y="170" text-anchor="middle" fill="var(--carte)" font-size="10" opacity=".75">cerveau</text>
+    <path d="M560 200 H318" stroke="var(--vert)" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#fl)"/>
+    <text x="439" y="222" text-anchor="middle" fill="var(--vert)" font-weight="600">profils, questions, classements</text>
+  </g>
+</svg>
+<figcaption>Fig. 2 — La connaissance est lue à chaque appel et réécrite par les agents. Modifier un fichier change le comportement, sans toucher au code.</figcaption>
+</figure>
+
+<article class="fiche" style="--c:var(--cyan)">
+  <div class="fh"><div class="num">06</div><div><h3>Écrire votre guide de voix</h3><div class="meta">connaissance/voix/guide-de-voix.md</div></div><span class="duree">20 min</span></div>
+  <div class="fc">
+    <p>Le fichier le plus important du dossier. Tous les agents rédacteurs le lisent avant d'écrire une ligne. Remplacez l'exemple d'instructeur de tir par <strong>votre</strong> métier.</p>
+    <div class="fichier"><div class="nom">connaissance/voix/guide-de-voix.md</div><pre># Guide de voix
+
+- Ton : direct, technique, sans esbroufe. On parle comme
+  en atelier, pas comme une plaquette commerciale.
+- Tutoiement dans les vidéos, vouvoiement dans les devis.
+- Phrases courtes. Un geste, une consigne, une raison.
+- On montre le travail réel : copeaux, soudures, reprises.
+- Sécurité avant tout : EPI visibles, machine à l'arrêt.
+- Aucune promesse miracle, aucun résultat garanti.
+
+## Signature
+Signature des réponses : (aucune)</pre></div>
+    <div class="note inf"><i>ℹ</i><div><b>Méthode rapide :</b> prenez vos trois derniers messages écrits à un client et relevez ce qui revient — tutoiement ou pas, longueur des phrases, ce que vous ne dites <em>jamais</em>. Six à huit puces suffisent ; au-delà, les agents se contredisent.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--cyan)">
+  <div class="fh"><div class="num">07</div><div><h3>Remplir les mots interdits</h3><div class="meta">connaissance/voix/mots-interdits.md · deux listes</div></div><span class="duree">15 min</span></div>
+  <div class="fc">
+    <p>Deux listes aux effets très différents. <strong>Bloquants</strong> : le brouillon est signalé et n'entre pas dans la file. <strong>Corrections</strong> : le mot est remplacé tout seul, le brouillon continue son chemin.</p>
+    <div class="fichier"><div class="nom">connaissance/voix/mots-interdits.md</div><pre>## Bloquants
+- garanti
+- garantie
+- 100 %
+- résultat assuré
+- sans effort
+- miracle
+- remboursé si
+- infaillible
+
+## Corrections
+- incroyable -&gt; net
+- révolutionnaire -&gt; simple
+- secret -&gt; détail
+- astuce de pro -&gt; consigne
+- facilement -&gt; avec méthode
+- super -&gt; très</pre></div>
+    <h4>Vérifier tout de suite</h4>
+    <div class="term"><span class="p">$</span> <span class="k">python3 -c "import sys;sys.path.insert(0,'.');from qg import studio;print(studio.controle('Un résultat garanti, vraiment incroyable.'))"</span></div>
+    <div class="sortie">{'verdict': '<span style="color:var(--rouge)">signale</span>', 'texte': 'Un résultat garanti, vraiment net.',
+ 'motifs': ["terme interdit « garanti » : aucune promesse ni garantie"],
+ 'retouches': ['« incroyable » → « net »']}</div>
+    <div class="note att"><i>⚠</i><div><b>La recherche ignore les accents mais respecte les mots entiers.</b> <code>garanti</code> attrape « GARANTI » et « garanti », mais pas « garantie partielle ». Mettez les deux formes si vous voulez les deux.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--cyan)">
+  <div class="fh"><div class="num">08</div><div><h3>Régler les limites de ton</h3><div class="meta">connaissance/voix/regles-de-ton.md · valeurs chiffrées</div></div><span class="duree">8 min</span></div>
+  <div class="fc">
+    <p>Ce fichier est lu comme des réglages : chaque puce <code>- nom : valeur</code> devient une limite que le contrôle applique.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Réglage</th><th>Effet</th><th>Défaut</th></tr></thead>
+      <tbody>
+        <tr><td><code>Longueur maximale d'une accroche</code></td><td>Au-delà, l'accroche est signalée</td><td>110 caractères</td></tr>
+        <tr><td><code>Longueur maximale d'une légende</code></td><td>Au-delà, la légende est signalée</td><td>600 caractères</td></tr>
+        <tr><td><code>Points d'exclamation maximum</code></td><td>Les suivants deviennent des points</td><td>1</td></tr>
+        <tr><td><code>Émojis maximum par texte</code></td><td>Repère pour vos relectures</td><td>1</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note inf"><i>ℹ</i><div>Les limites de <em>plateforme</em> (2 200 caractères Instagram, 100 YouTube) sont ailleurs, dans <code>connaissance/plateformes/</code>, et s'appliquent à la publication, pas à l'écriture.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--cyan)">
+  <div class="fh"><div class="num">09</div><div><h3>Déclarer l'offre, les tarifs et la FAQ</h3><div class="meta">connaissance/offre/ · format strict</div></div><span class="duree">20 min</span></div>
+  <div class="fc">
+    <p>Trois fichiers, trois rôles. <strong>Les tarifs sont la source unique des prix</strong> : un montant qui n'y figure pas fait signaler le brouillon et ne sera jamais envoyé à un prospect.</p>
+    <div class="fichier"><div class="nom">connaissance/offre/tarifs.md — format : - nom : prix € (détail)</div><pre>- Stage niveau 1 : 190 € (la journée, matériel fourni)
+- Stage niveau 2 : 220 € (la journée)
+- Sac de stand : 89 € (livraison incluse en France)</pre></div>
+    <div class="fichier"><div class="nom">connaissance/offre/faq.md — format : une ligne Q:, une ligne R:</div><pre>Q: débutant, débutante, jamais tiré, zéro
+R: Oui : le niveau 1 part de zéro, et on commence toujours à sec.
+
+Q: livraison, délai
+R: Les commandes partent sous 3 jours ouvrés, je les prépare moi-même.</pre></div>
+    <p>La ligne <code>Q:</code> contient <strong>des mots-clés séparés par des virgules</strong>, pas une question rédigée : c'est ce qui permet de reconnaître « c'est adapté à une débutante ? » aussi bien que « jamais tiré de ma vie ».</p>
+    <div class="note stop"><i>✕</i><div><b>Une question hors FAQ n'est jamais inventée.</b> Elle remonte dans « ont besoin de vous ». C'est voulu : mieux vaut vous déranger que publier une réponse fausse sous votre nom.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--cyan)">
+  <div class="fh"><div class="num">10</div><div><h3>Piliers, vocabulaire de niche et objectifs</h3><div class="meta">contenu/piliers.md · objectifs.md</div></div><span class="duree">12 min</span></div>
+  <div class="fc">
+    <p>Le <strong>vocabulaire de la niche</strong> est le filtre qui sépare une tendance exploitable d'un bruit viral. Une tendance qui ne contient aucun de ces mots est classée « Passer ».</p>
+    <div class="fichier"><div class="nom">connaissance/contenu/piliers.md (extrait)</div><pre>## Vocabulaire de la niche
+- tir
+- stand
+- visée
+- détente
+- prise en main
+- stage
+- à sec
+- groupement
+- arme</pre></div>
+    <div class="term"><span class="p">$</span> <span class="k">qg tendances</span></div>
+    <div class="sortie">Tendance                    Variation  Verdict
+──────────────────────────  ─────────  ─────────
+Tir à sec à la maison       +184 %     <span style="color:var(--vert)">Pour vous</span>
+Prise en main à deux mains  +121 %     <span style="color:var(--vert)">Pour vous</span>
+Défi viral de danse         +44 %      <span style="color:var(--orange)">Passer</span></div>
+    <div class="cases"><h4>Fin de la phase 2 — à cocher</h4>
+      <div>Le guide de voix parle de <em>votre</em> métier, pas du métier d'exemple.</div>
+      <div>Chaque prix que vous annoncez figure dans <code>tarifs.md</code>.</div>
+      <div>La FAQ couvre vos cinq questions les plus fréquentes.</div>
+      <div>Le vocabulaire de niche contient 8 à 15 mots.</div>
+      <div><code>python3 tests/test_qg.py</code> repasse au vert.</div>
+    </div>
+  </div>
+</article>
+
+<!-- ================= PHASE 3 ================= -->
+<div class="bande" style="--c:var(--orange)"><b>Phase 3 · Le premier cycle</b><em>étapes 11 à 15</em><small>45 min · de l'idée à la file</small></div>
+
+<article class="fiche" style="--c:var(--orange)">
+  <div class="fh"><div class="num">11</div><div><h3>Lancer la recherche</h3><div class="meta">4 commandes de lecture, sans effet de bord</div></div><span class="duree">10 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg tendances</span>     <span class="c"># ce qui monte, trié par votre vocabulaire</span>
+<span class="p">$</span> <span class="k">qg concurrents</span>   <span class="c"># qui explose, et avec quelle forme d'accroche</span>
+<span class="p">$</span> <span class="k">qg accroches</span>     <span class="c"># le labo : quelles formes gagnent</span>
+<span class="p">$</span> <span class="k">qg questions</span>     <span class="c"># ce que votre public demande vraiment</span></div>
+    <p>Le seuil « explose » est à <strong>×3 la moyenne du compte</strong> : on compare un post à son propre compte, pas aux autres. Un compte à 300 k vues de moyenne qui fait 980 k est un signal ; un gros compte qui fait son chiffre habituel n'en est pas un.</p>
+    <div class="sortie">Compte       Vues       × moyenne  Forme              Accroche
+───────────  ─────────  ─────────  ─────────────────  ──────────────────────────
+@d_tir       2 100 000  ×3,9 ▲     Preuve / résultat  J'ai arrêté 6 exercices…
+@pro_reagit  1 400 000  ×3,5 ▲     Série              Un instructeur réagit…
+@labo_stand  90 000     ×0,3       Autre              Nouveau sac en boutique</div>
+    <div class="note inf"><i>ℹ</i><div>Ajoutez <code>--ecrire 3</code> à <code>qg accroches</code> pour qu'il rédige des accroches dans les formes gagnantes et les range dans <code>connaissance/accroches/bibliotheque.md</code>.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--orange)">
+  <div class="fh"><div class="num">12</div><div><h3>Alimenter la banque d'idées</h3><div class="meta">qg idees — vos idées passent devant</div></div><span class="duree">8 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg idees</span>                                      <span class="c"># voir la banque</span>
+<span class="p">$</span> <span class="k">qg idees --ajouter "Souder sans déformer" --format Reel --pilier Technique</span></div>
+    <p>La banque se remplit toute seule (tendances retenues, questions récurrentes), mais <strong>les idées que vous ajoutez passent toujours en premier</strong> au moment de planifier la semaine. Les piliers valides : Technique, Preuve, Coulisses, Histoire, Offre.</p>
+    <div class="sortie">Id    Note  Format     Pilier     Titre                     Source              État
+────  ────  ─────────  ─────────  ────────────────────────  ──────────────────  ──────
+I015  80    Reel       Technique  Souder sans déformer      vous                libre
+I001  60    Reel       Technique  La prise en main d'abord  vous                libre
+I016  86    Reel       Technique  Tir à sec à la maison     tendance +184 %     libre</div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--orange)">
+  <div class="fh"><div class="num">13</div><div><h3>Écrire la semaine : <code>qg semaine</code></h3><div class="meta">La commande centrale · 14 posts d'un coup</div></div><span class="duree">10 min</span></div>
+  <div class="fc">
+    <p>Une seule commande choisit les idées, écrit l'accroche, le script, la légende et les mots-dièse, passe chaque brouillon au contrôle, et range le tout dans la file.</p>
+    <div class="term"><span class="p">$</span> <span class="k">qg semaine</span>          <span class="c"># 14 posts (réglé dans objectifs.md)</span>
+<span class="p">$</span> <span class="k">qg semaine -n 7</span>     <span class="c"># une semaine allégée</span></div>
+    <div class="sortie">SEMAINE DU 2026-11-30 · 14 posts écrits et contrôlés
+Id    Jour  Heure  Format     Titre                 Contrôle   Accroche
+────  ────  ─────  ─────────  ────────────────────  ─────────  ─────────────────────────
+P001  Lun   07:30  Reel       La prise en main…     <span style="color:var(--vert)">Conforme</span>   Ton tir part de travers…
+P006  Sam   07:30  Reel       Programme stagiaires  <span style="color:var(--cyan)">Corrigé ✓</span>  Les inscriptions du stage…
+P011  Jeu   19:00  Légende    Promesse de résultat  <span style="color:var(--rouge)">SIGNALÉ</span>    Groupement divisé par deux…
+
+<span style="color:var(--cyan)">✓ P006 corrigé : « incroyable » → « net ».</span>
+<span style="color:var(--rouge)">⚠ P011 signalé : terme interdit « garanti ». Il n'entre pas dans la file.</span>
+
+13 posts attendent votre approbation.</div>
+    <div class="note ok"><i>✓</i><div><b>Une idée ne sert qu'une fois.</b> Elle passe à l'état « planifiée » : relancer <code>qg semaine</code> prendra les suivantes, jamais les mêmes.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--orange)">
+  <div class="fh"><div class="num">14</div><div><h3>Lire le contrôle et traiter un signalement</h3><div class="meta">Les trois verdicts</div></div><span class="duree">10 min</span></div>
+  <div class="fc">
+    <figure style="border:0;padding:0">
+    <svg viewBox="0 0 1000 220" role="img" aria-label="Les trois verdicts du contrôle de marque : conforme passe, corrigé passe après remplacement, signalé est bloqué hors de la file.">
+      <g font-family="Archivo, sans-serif" font-size="13" font-weight="600">
+        <rect x="14" y="80" width="150" height="58" rx="8" fill="var(--carte)" stroke="var(--filet)" stroke-width="1.6"/>
+        <text x="89" y="105" text-anchor="middle" fill="var(--encre)">Brouillon</text>
+        <text x="89" y="123" text-anchor="middle" fill="var(--pale)" font-size="10.5" font-weight="500">accroche · script · légende</text>
+        <path d="M164 109 H214" stroke="var(--encre-2)" stroke-width="1.8" fill="none" marker-end="url(#fl)"/>
+        <polygon points="300,56 392,109 300,162 208,109" fill="color-mix(in srgb, var(--orange) 12%, transparent)" stroke="var(--orange)" stroke-width="2.5"/>
+        <text x="300" y="104" text-anchor="middle" fill="var(--encre)" font-size="12">Contrôle</text>
+        <text x="300" y="121" text-anchor="middle" fill="var(--encre)" font-size="12">de marque</text>
+        <g>
+          <rect x="470" y="14" width="250" height="52" rx="8" fill="none" stroke="var(--vert)" stroke-width="2"/>
+          <text x="492" y="38" fill="var(--vert)" font-size="12" font-family="IBM Plex Mono, monospace">CONFORME</text>
+          <text x="492" y="55" fill="var(--pale)" font-size="10.5" font-weight="500">rien à redire → entre dans la file</text>
+        </g>
+        <g>
+          <rect x="470" y="83" width="250" height="52" rx="8" fill="none" stroke="var(--cyan)" stroke-width="2"/>
+          <text x="492" y="107" fill="var(--cyan)" font-size="12" font-family="IBM Plex Mono, monospace">CORRIGÉ ✓</text>
+          <text x="492" y="124" fill="var(--pale)" font-size="10.5" font-weight="500">mot remplacé → entre dans la file</text>
+        </g>
+        <g>
+          <rect x="470" y="152" width="250" height="52" rx="8" fill="color-mix(in srgb, var(--rouge) 10%, transparent)" stroke="var(--rouge)" stroke-width="2.5"/>
+          <text x="492" y="176" fill="var(--rouge)" font-size="12" font-family="IBM Plex Mono, monospace">SIGNALÉ</text>
+          <text x="492" y="193" fill="var(--pale)" font-size="10.5" font-weight="500">bloqué → hors file, vous décidez</text>
+        </g>
+        <path d="M392 95 H464" stroke="var(--vert)" stroke-width="1.8" fill="none" marker-end="url(#fl)"/>
+        <path d="M392 109 H464" stroke="var(--cyan)" stroke-width="1.8" fill="none" marker-end="url(#fl)"/>
+        <path d="M392 125 Q430 178 464 178" stroke="var(--rouge)" stroke-width="1.8" fill="none" marker-end="url(#fl)"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" fill="var(--pale)">
+          <text x="744" y="34">promesse ou garantie</text>
+          <text x="744" y="51">prix absent de tarifs.md</text>
+          <text x="744" y="68">texte trop long</text>
+          <text x="744" y="85" fill="var(--rouge)">↑ les 3 causes de blocage</text>
+        </g>
+      </g>
+    </svg>
+    <figcaption>Fig. 3 — Trois verdicts, une seule sortie bloquante.</figcaption>
+    </figure>
+    <p>Un post signalé <strong>n'entre jamais dans la file</strong>, même avec <code>qg valider --tout</code>. Trois issues possibles :</p>
+    <ol>
+      <li><strong>Réécrire le fond.</strong> « Garanti » devient « voici ce qu'a donné le cas de Marc, en 3 jours » — c'est un fait, plus une promesse.</li>
+      <li><strong>Corriger le tarif.</strong> Si le prix est juste mais absent, ajoutez-le dans <code>tarifs.md</code>, puis relancez.</li>
+      <li><strong>Assumer et refuser.</strong> <code>qg refuser P011 -m "promesse non tenable"</code> : le post sort du jeu, la trace reste.</li>
+    </ol>
+    <div class="term"><span class="p">$</span> <span class="k">qg voir P011</span>   <span class="c"># le post en entier, avec le motif exact</span></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--orange)">
+  <div class="fh"><div class="num">15</div><div><h3>Approuver, puis programmer</h3><div class="meta">Le seul point d'arrêt humain</div></div><span class="duree">7 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg file</span>                    <span class="c"># ce qui attend</span>
+<span class="p">$</span> <span class="k">qg voir P003</span>               <span class="c"># lire un post en entier</span>
+<span class="p">$</span> <span class="k">qg valider P003 P008</span>       <span class="c"># au cas par cas</span>
+<span class="p">$</span> <span class="k">qg valider --tout</span>          <span class="c"># toute la file d'un coup</span>
+<span class="p">$</span> <span class="k">qg refuser P009 -m "à retourner"</span>
+<span class="p">$</span> <span class="k">qg programme</span>               <span class="c"># créneaux × 4 plateformes</span></div>
+    <div class="sortie">Post  Quand             Plateforme  Format           État
+────  ────────────────  ──────────  ───────────────  ────────────────────────────────────
+P003  2026-12-02 07:30  tiktok      9:16, 1080x1920  <span style="color:var(--orange)">simulation (application non auditée)</span>
+P003  2026-12-02 08:00  instagram   9:16, 1080x1920  <span style="color:var(--orange)">simulation</span>
+P003  2026-12-02 12:00  youtube     9:16, 1080x1920  <span style="color:var(--orange)">simulation (application non auditée)</span></div>
+    <div class="note att"><i>⚠</i><div><b>TikTok et YouTube resteront en simulation même branchés.</b> Leur API de publication exige une application auditée par la plateforme. Le QG l'annonce au lieu de faire semblant ; Instagram et Facebook publient réellement via n8n (étape 24).</div></div>
+  </div>
+</article>
+
+<!-- ================= PHASE 4 ================= -->
+<div class="bande" style="--c:var(--vert)"><b>Phase 4 · Le studio</b><em>étapes 16 à 20</em><small>50 min · images, vidéo, voix</small></div>
+
+<article class="fiche" style="--c:var(--vert)">
+  <div class="fh"><div class="num">16</div><div><h3>Carrousels et miniatures</h3><div class="meta">SVG, sans aucun service externe</div></div><span class="duree">8 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg carrousel P002</span>   <span class="c"># 6 pages 1080×1350 + le plan en Markdown</span>
+<span class="p">$</span> <span class="k">qg miniature P001</span>   <span class="c"># 1 image 1280×720</span></div>
+    <div class="sortie">6 pages écrites :
+  donnees/carrousels/P002/page-1.svg
+  …
+  donnees/carrousels/P002/plan.md</div>
+    <p>Les pages sortent en <strong>SVG</strong> : texte vectoriel, modifiable dans Inkscape ou Illustrator, exportable en PNG à n'importe quelle définition. Aucun compte Canva nécessaire.</p>
+    <div class="note inf"><i>ℹ</i><div>Conversion en PNG si votre plateforme la réclame : <code>for f in donnees/carrousels/P002/*.svg; do rsvg-convert -w 1080 "$f" -o "${f%.svg}.png"; done</code></div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--vert)">
+  <div class="fh"><div class="num">17</div><div><h3>Découper une vidéo longue</h3><div class="meta">qg decouper · silences retirés puis clips</div></div><span class="duree">12 min</span></div>
+  <div class="fc">
+    <figure style="border:0;padding:0">
+    <svg viewBox="0 0 1000 150" role="img" aria-label="Chaîne vidéo : tournage brut, retrait des silences, découpe en clips, montage 9:16, sous-titres, voix off, post final.">
+      <g font-family="IBM Plex Mono, monospace" font-size="11" font-weight="500" text-anchor="middle">
+        <rect x="10" y="44" width="124" height="56" rx="8" fill="var(--carte)" stroke="var(--filet)" stroke-width="1.6"/>
+        <text x="72" y="68" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">Tournage</text>
+        <text x="72" y="86" fill="var(--pale)">16:9 · 70 s</text>
+        <rect x="172" y="44" width="134" height="56" rx="8" fill="none" stroke="var(--vert)" stroke-width="1.8"/>
+        <text x="239" y="68" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">auto-editor</text>
+        <text x="239" y="86" fill="var(--pale)">silences retirés</text>
+        <rect x="344" y="44" width="124" height="56" rx="8" fill="none" stroke="var(--vert)" stroke-width="1.8"/>
+        <text x="406" y="68" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">ffmpeg</text>
+        <text x="406" y="86" fill="var(--pale)">3 clips de 30 s</text>
+        <rect x="506" y="44" width="134" height="56" rx="8" fill="none" stroke="var(--vert)" stroke-width="1.8"/>
+        <text x="573" y="68" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">recadrage</text>
+        <text x="573" y="86" fill="var(--pale)">1080 × 1920</text>
+        <rect x="678" y="44" width="124" height="56" rx="8" fill="none" stroke="var(--cyan)" stroke-width="1.8" stroke-dasharray="5 4"/>
+        <text x="740" y="68" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">whisper</text>
+        <text x="740" y="86" fill="var(--pale)">sous-titres</text>
+        <rect x="840" y="44" width="150" height="56" rx="8" fill="var(--encre)"/>
+        <text x="915" y="68" fill="var(--carte)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">Post prêt</text>
+        <text x="915" y="86" fill="var(--carte)" opacity=".75">+ voix off</text>
+      </g>
+      <g fill="none" stroke="var(--encre-2)" stroke-width="1.8" marker-end="url(#fl)">
+        <path d="M134 72 H166"/><path d="M306 72 H338"/><path d="M468 72 H500"/><path d="M640 72 H672"/><path d="M802 72 H834"/>
+      </g>
+      <text x="239" y="124" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--pale)" text-anchor="middle">facultatif</text>
+      <text x="740" y="124" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--pale)" text-anchor="middle">facultatif</text>
+    </svg>
+    <figcaption>Fig. 4 — Seul ffmpeg est obligatoire. Les étapes en pointillés sont sautées proprement si l'outil n'est pas installé.</figcaption>
+    </figure>
+    <div class="term"><span class="p">$</span> <span class="k">qg decouper ~/tournages/atelier-mars.mp4 -s 30</span></div>
+    <div class="sortie">3 clips :
+  donnees/clips/atelier-mars/clip-00.mp4
+  donnees/clips/atelier-mars/clip-01.mp4
+  donnees/clips/atelier-mars/clip-02.mp4</div>
+    <div class="note inf"><i>ℹ</i><div><b>Pour le retrait des silences :</b> <code>pip install auto-editor</code>. Sans lui, la découpe se fait quand même, en segments réguliers.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--vert)">
+  <div class="fh"><div class="num">18</div><div><h3>Monter en 9:16 avec sous-titres</h3><div class="meta">qg monter · recadrage centré, incrustation</div></div><span class="duree">15 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg monter donnees/clips/atelier-mars/clip-00.mp4</span>
+<span class="p">$</span> <span class="k">qg monter clip-00.mp4 --srt mes-sous-titres.srt</span>   <span class="c"># vos propres sous-titres</span></div>
+    <div class="sortie">Montage écrit : donnees/montages/clip-00-1080x1920.mp4</div>
+    <h4>Vérifier la sortie</h4>
+    <div class="term"><span class="p">$</span> <span class="k">ffprobe -v error -show_entries stream=width,height -of csv=p=0 donnees/montages/clip-00-1080x1920.mp4</span></div>
+    <div class="sortie">1080,1920</div>
+    <p>Le recadrage est <strong>centré</strong> : la mise à l'échelle agrandit jusqu'à couvrir, puis rogne les côtés. Cadrez donc vos sujets au centre au tournage, ou passez par un montage manuel pour les plans décentrés.</p>
+    <div class="note inf"><i>ℹ</i><div><b>Sous-titres automatiques :</b> <code>pip install openai-whisper</code>. Premier passage long (téléchargement du modèle), ensuite rapide. Sans lui, le montage se fait sans sous-titres.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--vert)">
+  <div class="fh"><div class="num">19</div><div><h3>La voix off</h3><div class="meta">Texte, puis Chatterbox local ou ElevenLabs</div></div><span class="duree">10 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg voix P001</span></div>
+    <div class="sortie">Texte à dire : donnees/voix/P001.txt
+Moteur : aucun (texte prêt à enregistrer ou à synthétiser)</div>
+    <p>Le QG extrait d'abord <strong>ce qui est réellement prononcé</strong> : les indications de mise en scène du script (horodatages, didascalies) sont retirées. Trois usages :</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Vous voulez</th><th>À faire</th><th>Résultat</th></tr></thead>
+      <tbody>
+        <tr><td>Lire vous-même</td><td>Rien, le fichier .txt suffit</td><td>Texte propre au prompteur</td></tr>
+        <tr><td>Votre voix clonée, en local</td><td><code>donnees/voix/reference.wav</code> (20 s de vous) + <code>pip install chatterbox-tts</code></td><td>.wav synthétisé, hors ligne</td></tr>
+        <tr><td>Une voix de catalogue</td><td><code>ELEVENLABS_CLE</code> et <code>ELEVENLABS_VOIX</code></td><td>.mp3 synthétisé</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note att"><i>⚠</i><div><b>Le clonage de voix engage votre responsabilité.</b> N'utilisez comme référence que votre propre voix, ou une voix dont vous avez l'accord écrit.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--vert)">
+  <div class="fh"><div class="num">20</div><div><h3>Les plans de coupe</h3><div class="meta">qg plans · liste de tournage</div></div><span class="duree">5 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg plans P001</span></div>
+    <div class="sortie">Plan à tourner                          Recherche d'archive            Liens
+──────────────────────────────────────  ─────────────────────────────  ─────
+Gros plan mains : la prise en main      shooting range hands close up  —
+Cible vue de face, impacts visibles     paper target close up          —
+Plan large du stand, lumière naturelle  indoor shooting range          —</div>
+    <p>La colonne « Liens » se remplit de propositions Pexels dès que <code>PEXELS_CLE</code> est posée. Sans clé, la liste reste votre <strong>pense-bête de tournage</strong> : quatre plans à faire avant de ranger le trépied.</p>
+  </div>
+</article>
+
+<!-- ================= PHASE 5 ================= -->
+<div class="bande" style="--c:var(--rouge)"><b>Phase 5 · La boucle</b><em>étapes 21 à 25</em><small>55 min · communauté, argent, automatisation</small></div>
+
+<article class="fiche" style="--c:var(--rouge)">
+  <div class="fh"><div class="num">21</div><div><h3>Trier la boîte</h3><div class="meta">qg commentaire · 6 étiquettes</div></div><span class="duree">12 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg commentaire</span>              <span class="c"># prépare, n'envoie rien</span>
+<span class="p">$</span> <span class="k">qg commentaire --envoyer</span>    <span class="c"># répond pour de vrai (Meta branché)</span></div>
+    <div class="sortie">BOÎTE · 22 messages triés
+Prospects 9   Inscriptions 2   Questions 5   Éloges 3   Plaintes 2   Spam 1
+
+⚠ 3 ont besoin de vous personnellement
+Auteur  Canal        Message
+──────  ───────────  ───────────────────────────────────────
+Léo     message      Commande pas reçue depuis 10 jours
+Marc    message      Je veux un remboursement, sangle cassée
+Omar    commentaire  Comment tu règles ta hausse ?</div>
+    <div class="tbl"><table>
+      <thead><tr><th>Étiquette</th><th>Ce que fait le QG</th></tr></thead>
+      <tbody>
+        <tr><td><b style="color:var(--vert)">Prospect</b></td><td>Prix exact depuis <code>tarifs.md</code> + lien suivi, et la personne entre dans la liste des prospects</td></tr>
+        <tr><td><b>Inscription</b></td><td>Le mot-clé seul (« STAGE ») déclenche le message de bienvenue</td></tr>
+        <tr><td><b>Question</b></td><td>Réponse tirée de la FAQ ; hors FAQ, elle vous remonte</td></tr>
+        <tr><td><b>Éloge</b></td><td>Remerciement court</td></tr>
+        <tr><td><b style="color:var(--rouge)">Plainte</b></td><td><b>Jamais de réponse automatique.</b> Alerte, vous répondez</td></tr>
+        <tr><td><b style="color:var(--pale)">Spam</b></td><td>Ignoré</td></tr>
+      </tbody>
+    </table></div>
+    <p>Les étiquettes se règlent dans <code>connaissance/communaute/etiquettes-prospects.md</code> : <strong>l'ordre compte</strong>, la première qui correspond l'emporte. Spam et plainte sont placés avant prospect pour qu'un « rembourse-moi, ça coûte combien cette arnaque » ne parte jamais en réponse commerciale.</p>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--rouge)">
+  <div class="fh"><div class="num">22</div><div><h3>Suivre l'argent, pas les « j'aime »</h3><div class="meta">qg entonnoir · attribution UTM</div></div><span class="duree">12 min</span></div>
+  <div class="fc">
+    <figure style="border:0;padding:0">
+    <svg viewBox="0 0 1000 200" role="img" aria-label="Attribution : le post reçoit un lien UTM, le clic porte l'identifiant du post, la commande Shopify le conserve dans sa page d'arrivée, le QG rattache la vente au post.">
+      <g font-family="IBM Plex Mono, monospace" font-size="11" font-weight="500">
+        <rect x="12" y="62" width="150" height="62" rx="8" fill="var(--carte)" stroke="var(--filet)" stroke-width="1.6"/>
+        <text x="87" y="88" text-anchor="middle" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="13" font-weight="700">Post P003</text>
+        <text x="87" y="106" text-anchor="middle" fill="var(--pale)">approuvé</text>
+        <rect x="212" y="52" width="268" height="82" rx="8" fill="color-mix(in srgb, var(--bleu) 8%, transparent)" stroke="var(--bleu)" stroke-width="1.8"/>
+        <text x="346" y="76" text-anchor="middle" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="12.5" font-weight="700">Lien suivi</text>
+        <text x="346" y="96" text-anchor="middle" fill="var(--bleu)" font-size="10">…/stages?utm_source=instagram</text>
+        <text x="346" y="112" text-anchor="middle" fill="var(--bleu)" font-size="10">&amp;utm_content=<tspan font-weight="700">P003</tspan></text>
+        <rect x="530" y="62" width="168" height="62" rx="8" fill="none" stroke="var(--filet)" stroke-width="1.6"/>
+        <text x="614" y="88" text-anchor="middle" fill="var(--encre)" font-family="Archivo, sans-serif" font-size="13" font-weight="700">Commande</text>
+        <text x="614" y="106" text-anchor="middle" fill="var(--pale)">Shopify · 190 €</text>
+        <rect x="748" y="52" width="240" height="82" rx="8" fill="var(--encre)"/>
+        <text x="868" y="80" text-anchor="middle" fill="var(--carte)" font-family="Archivo, sans-serif" font-size="13" font-weight="700">P003 → 1 900 €</text>
+        <text x="868" y="100" text-anchor="middle" fill="var(--carte)" opacity=".75" font-size="10.5">sur 10 commandes</text>
+        <text x="868" y="118" text-anchor="middle" fill="var(--carte)" opacity=".6" font-size="10">qg entonnoir</text>
+      </g>
+      <g fill="none" stroke="var(--encre-2)" stroke-width="1.8" marker-end="url(#fl)">
+        <path d="M162 93 H206"/><path d="M480 93 H524"/><path d="M698 93 H742"/>
+      </g>
+      <text x="500" y="168" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--rouge)">une commande sans utm_content n'est rattachée à aucun post : elle est comptée « non rattachée »</text>
+    </svg>
+    <figcaption>Fig. 5 — L'identifiant du post voyage jusqu'à la caisse. C'est ce qui permet de dire quel post a payé.</figcaption>
+    </figure>
+    <div class="term"><span class="p">$</span> <span class="k">qg entonnoir</span>        <span class="c"># 7 jours par défaut</span>
+<span class="p">$</span> <span class="k">qg entonnoir -j 30</span>  <span class="c"># sur un mois</span></div>
+    <div class="sortie">Étape               Valeur   Taux
+──────────────────  ───────  ──────────────────
+Vues                184 000  100 %
+Abonnés             620      0,3 % des vues
+Clics               1 150    0,6 % des vues
+Clients             23       2,0 % des clics
+Chiffre d'affaires  4 370 €  panier moyen 190 €
+
+<span style="color:var(--rouge)">⚠ « Tendance du moment » : 24 600 j'aime, 0 clic, 0 €. À ne pas refaire.</span></div>
+    <div class="note ok"><i>✓</i><div><b>Le signalement « à ne pas refaire » est le plus utile du dossier.</b> Il identifie le post qui a gagné le concours de popularité et rapporté zéro euro — exactement le genre de contenu qu'on refait par réflexe.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--rouge)">
+  <div class="fh"><div class="num">23</div><div><h3>Classer, tester, pousser</h3><div class="meta">qg notes · qg test · qg pub</div></div><span class="duree">8 min</span></div>
+  <div class="fc">
+    <div class="term"><span class="p">$</span> <span class="k">qg notes</span>        <span class="c"># vos formes d'accroche classées par euros</span>
+<span class="p">$</span> <span class="k">qg test P001</span>    <span class="c"># deux variantes dans les formes gagnantes</span>
+<span class="p">$</span> <span class="k">qg pub -b 15</span>    <span class="c"># 15 €/jour répartis au prorata des revenus</span></div>
+    <div class="sortie">POUSSER LES GAGNANTS · budget réparti au prorata des revenus
+Post  Titre                  Revenus  Budget / jour  Canal
+────  ─────────────────────  ───────  ─────────────  ───────────────────────────────
+X01   Jour 1 contre jour 30  1 900 €  8 €            Meta · TikTok Spark Ads
+X02   Routine en 3 gestes    950 €    4 €            Meta · TikTok Spark Ads
+X03   Dernières places       760 €    3 €            Meta · TikTok Spark Ads</div>
+    <p><code>qg notes</code> écrit son classement dans <code>connaissance/accroches/formes-gagnantes.md</code> : la boucle se referme, car <code>qg semaine</code> relira ce fichier la semaine suivante. <strong>Le QG apprend de vos propres résultats, pas d'une théorie générale.</strong></p>
+    <div class="note stop"><i>✕</i><div><b>Le QG ne dépense aucun euro.</b> Il propose la répartition ; la campagne se crée à la main dans le gestionnaire de publicités. Aucune clé de paiement n'est jamais demandée.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--rouge)">
+  <div class="fh"><div class="num">24</div><div><h3>Brancher vos comptes</h3><div class="meta">legion/.env · puis qg releve</div></div><span class="duree">15 min</span></div>
+  <div class="fc">
+    <div class="fichier"><div class="nom">legion/.env — jamais versionné (il est dans .gitignore)</div><pre>TELEGRAM_BOT_TOKEN=123456:AA…
+TELEGRAM_CHAT_ID=987654321
+SHOPIFY_BOUTIQUE=ma-boutique.myshopify.com
+SHOPIFY_JETON=shpat_…
+META_JETON=EAAG…
+META_COMPTE_IG=1784…
+N8N_WEBHOOK_PUBLICATION=https://n8n.chezmoi.fr/webhook/legion-publication
+PEXELS_CLE=…</pre></div>
+    <div class="term"><span class="p">$</span> <span class="k">chmod 600 .env</span>   <span class="c"># lisible par vous seul</span>
+<span class="p">$</span> <span class="k">qg etat</span>          <span class="c"># vérifier : « branché » au lieu de « simulation »</span>
+<span class="p">$</span> <span class="k">qg releve</span>        <span class="c"># remplacer les exemples par vos vraies données</span></div>
+    <div class="sortie">Shopify : 48 commandes relevées.
+Instagram : 213 commentaires relevés.
+Telegram : toute la file approuvée depuis votre téléphone.</div>
+    <h4>Dans quel ordre brancher</h4>
+    <ol>
+      <li><strong>Telegram d'abord</strong> (5 min, gratuit) : <code>@BotFather</code> → <code>/newbot</code> → le jeton. Votre <code>chat_id</code> s'obtient en écrivant au bot puis en ouvrant <code>https://api.telegram.org/bot&lt;JETON&gt;/getUpdates</code>. Vous approuvez alors depuis votre téléphone.</li>
+      <li><strong>Shopify ensuite</strong> : c'est lui qui transforme les vues en euros. Application privée, droit <code>read_orders</code> uniquement.</li>
+      <li><strong>Meta en dernier</strong> : le plus lourd (compte professionnel, page liée, vérification). Sans lui, le tri de la boîte tourne sur export manuel.</li>
+    </ol>
+    <div class="note stop"><i>✕</i><div><b>Jamais de clé dans le dépôt.</b> <code>.env</code> est déjà dans <code>.gitignore</code>. Vérifiez avant tout envoi : <code>git status --short | grep env</code> ne doit rien afficher.</div></div>
+  </div>
+</article>
+
+<article class="fiche" style="--c:var(--rouge)">
+  <div class="fh"><div class="num">25</div><div><h3>La tournée de nuit</h3><div class="meta">cron · qg matin --telegram</div></div><span class="duree">8 min</span></div>
+  <div class="fc">
+    <figure style="border:0;padding:0">
+    <svg viewBox="0 0 1000 170" role="img" aria-label="Déroulé de la tournée de nuit, de 6 h 45 à 7 h 30 : relève, tri, attribution, classement, rédaction du résumé, envoi Telegram.">
+      <line x1="40" y1="92" x2="960" y2="92" stroke="var(--filet)" stroke-width="2"/>
+      <g font-family="IBM Plex Mono, monospace" font-size="10.5" text-anchor="middle">
+        <g fill="var(--encre)">
+          <circle cx="60" cy="92" r="7" fill="var(--rouge)"/>
+          <text x="60" y="68" font-weight="700">06:45</text>
+          <text x="60" y="122" fill="var(--pale)">cron</text>
+        </g>
+        <g><circle cx="240" cy="92" r="6" fill="var(--carte)" stroke="var(--encre-2)" stroke-width="2"/>
+          <text x="240" y="68" fill="var(--encre)">relève</text>
+          <text x="240" y="122" fill="var(--pale)">Shopify · Meta</text></g>
+        <g><circle cx="420" cy="92" r="6" fill="var(--carte)" stroke="var(--encre-2)" stroke-width="2"/>
+          <text x="420" y="68" fill="var(--encre)">tri de la boîte</text>
+          <text x="420" y="122" fill="var(--pale)">réponses prêtes</text></g>
+        <g><circle cx="600" cy="92" r="6" fill="var(--carte)" stroke="var(--encre-2)" stroke-width="2"/>
+          <text x="600" y="68" fill="var(--encre)">attribution</text>
+          <text x="600" y="122" fill="var(--pale)">UTM → euros</text></g>
+        <g><circle cx="780" cy="92" r="6" fill="var(--carte)" stroke="var(--encre-2)" stroke-width="2"/>
+          <text x="780" y="68" fill="var(--encre)">classement</text>
+          <text x="780" y="122" fill="var(--pale)">accroches</text></g>
+        <g><circle cx="940" cy="92" r="9" fill="var(--vert)"/>
+          <text x="930" y="68" font-weight="700" fill="var(--encre)">07:30</text>
+          <text x="925" y="122" fill="var(--vert)" font-weight="600">Telegram</text></g>
+      </g>
+    </svg>
+    <figcaption>Fig. 6 — 45 minutes de travail, un seul message à l'arrivée.</figcaption>
+    </figure>
+    <div class="term"><span class="p">$</span> <span class="k">crontab -e</span>
+<span class="c"># la tournée complète, puis le résumé sur Telegram à 7 h 30</span>
+<span class="k">45 6 * * * cd /home/vous/Sanctuary-GCSI/legion && /usr/bin/python3 -m qg matin --telegram >> donnees/cron.log 2>&1</span></div>
+    <div class="sortie">Bonjour, chef ☀
+
+CA 7 jours 4 370 €   Prospects 9   Abonnés 620
+
+€ Meilleur post : « Jour 1 contre jour 30 » a rapporté 1 900 € sur 10 commandes. Faites une suite.
+△ Le post le plus aimé a rapporté 0 €. 24 600 j'aime, aucun clic. À ne pas refaire.
+✎ 13 posts sont écrits et vérifiés. Ils attendent votre approbation : « qg file ».
+◯ 3 messages ont besoin de vous (remboursements, réclamations). Le reste est traité.
+↗ Tendance à saisir : tir à sec à la maison, +184 %.</div>
+    <div class="note att"><i>⚠</i><div><b>cron n'a pas votre alias ni votre PATH.</b> Toujours le chemin absolu de Python et un <code>cd</code> vers <code>legion/</code>. Testez d'abord la ligne à la main, exactement telle qu'écrite.</div></div>
+    <div class="cases"><h4>Le QG tourne — à cocher</h4>
+      <div><code>qg etat</code> affiche au moins Telegram et Shopify en « branché ».</div>
+      <div>Un message de test est bien arrivé sur votre téléphone.</div>
+      <div>La ligne cron a tourné une fois à la main sans erreur.</div>
+      <div><code>qg journal</code> n'affiche aucune croix rouge.</div>
+      <div><code>qg tableau</code> produit la page de suivi.</div>
+    </div>
+  </div>
+</article>
+
+<section class="fin">
+  <h2>Et ensuite, chaque semaine</h2>
+  <p>Une fois les 25 étapes passées, le rythme de croisière tient en quatre commandes. Le reste tourne la nuit.</p>
+  <div class="g">
+    <div><b>Lundi · 10 min</b><span><code>qg semaine</code> puis <code>qg file</code> : vous lisez, vous approuvez, vous programmez.</span></div>
+    <div><b>Chaque matin · 1 min</b><span>Le résumé Telegram. Vous ne touchez au QG que s'il demande quelque chose.</span></div>
+    <div><b>Vendredi · 5 min</b><span><code>qg entonnoir</code> et <code>qg notes</code> : ce qui a payé, ce qu'on arrête.</span></div>
+    <div><b>Quand ça bouge</b><span><code>qg interruptions</code> : les sept cas qui méritent de vous réveiller.</span></div>
+  </div>
+</section>
+
+</div>

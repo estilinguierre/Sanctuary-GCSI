@@ -1,0 +1,562 @@
+<meta name="dash-one-writer">
+<style>
+#dash-root{--l-ok:var(--color-ok);--l-warn:var(--color-warn)}
+.lg-wrap{display:flex;flex-direction:column;gap:var(--cds-gap-xl)}
+.lg-intro{font-size:var(--cds-font-size-body);color:var(--color-fg-muted);max-width:68ch}
+.lg-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--cds-gap-md)}
+.lg-tile{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius);
+  padding:var(--cds-pad-lg);display:flex;flex-direction:column;gap:4px;min-width:0}
+.lg-tile .k{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted);text-transform:uppercase;letter-spacing:.08em}
+.lg-tile .v{font-family:var(--font-anthropic-serif);font-weight:400;font-size:34px;line-height:1.1;font-variant-numeric:tabular-nums}
+.lg-tile .s{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.lg-sec{display:flex;flex-direction:column;gap:var(--cds-gap-md);min-width:0}
+.lg-h{display:flex;gap:var(--cds-gap-sm);align-items:baseline;flex-wrap:wrap}
+.lg-h h2{font-size:var(--cds-font-size-heading);font-weight:var(--cds-font-weight-medium);margin:0}
+.lg-h .note{font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.lg-phases{display:flex;flex-direction:column;gap:10px}
+.lg-ph{display:grid;grid-template-columns:minmax(120px,1.1fr) minmax(0,3fr) auto;gap:var(--cds-gap-sm);align-items:center;font-size:var(--cds-font-size-caption)}
+.lg-ph .nom{font-weight:var(--cds-font-weight-medium);font-size:var(--cds-font-size-body);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-bar{height:14px;border-radius:7px;background:var(--cds-chart-grid,var(--color-border-line));overflow:hidden}
+.lg-bar i{display:block;height:100%;border-radius:7px}
+.lg-ph .chiffre{font-variant-numeric:tabular-nums;color:var(--color-fg-muted);white-space:nowrap}
+.lg-ctrl{display:flex;gap:var(--cds-gap-sm);align-items:center;flex-wrap:wrap}
+.lg-scroll{overflow-x:auto;border:1px solid var(--color-border-line);border-radius:var(--cds-radius)}
+table.lg-t{width:100%;border-collapse:collapse;font-size:var(--cds-font-size-caption);min-width:620px}
+table.lg-t th{text-align:left;padding:9px 12px;border-bottom:1px solid var(--color-border-line);
+  color:var(--color-fg-muted);text-transform:uppercase;letter-spacing:.07em;font-weight:var(--cds-font-weight-medium);white-space:nowrap}
+table.lg-t td{padding:8px 12px;border-bottom:1px solid var(--color-border-line);vertical-align:middle}
+table.lg-t tr:last-child td{border-bottom:0}
+table.lg-t td.num,table.lg-t td.min{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--color-fg-muted)}
+table.lg-t td.cmd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--color-fg-muted)}
+table.lg-t td.tit{font-size:var(--cds-font-size-body)}
+tr.fait td.tit{color:var(--color-fg-muted);text-decoration:line-through}
+td.ph span{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10.5px;white-space:nowrap}
+.lg-case{width:18px;height:18px;accent-color:var(--color-ok);cursor:pointer}
+.lg-etat{display:inline-flex;gap:6px;align-items:center;font-size:11px;white-space:nowrap}
+.lg-pt{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.lg-funnel{display:flex;flex-direction:column;gap:9px}
+.lg-fr{display:grid;grid-template-columns:minmax(74px,auto) minmax(0,1fr) minmax(86px,auto);gap:var(--cds-gap-sm);align-items:center;font-size:var(--cds-font-size-caption)}
+.lg-fr .lab{color:var(--color-fg-muted)}
+.lg-fr .val{text-align:right;font-variant-numeric:tabular-nums;font-size:var(--cds-font-size-body)}
+.lg-fbar{height:26px;border-radius:5px;min-width:3px}
+.lg-chart{position:relative;min-height:230px}
+.lg-tip{position:absolute;pointer-events:none;background:var(--cds-surface-popover,var(--color-panel));
+  border:1px solid var(--cds-border,var(--color-border-line));border-radius:6px;padding:6px 9px;font-size:11.5px;
+  box-shadow:var(--cds-shadow-popover,0 4px 14px rgba(0,0,0,.2));white-space:nowrap;z-index:5}
+.lg-chart svg text{fill:var(--cds-text-secondary,var(--color-fg-muted));font-size:11px}
+.lg-note{background:var(--color-panel);border:1px solid var(--color-border-line);border-left:3px solid var(--color-warn);
+  border-radius:var(--cds-radius);padding:var(--cds-pad-md);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+.lg-note b{color:var(--color-fg)}
+#lg-nosave{color:var(--color-bad);font-size:var(--cds-font-size-caption)}
+details.lg-d{border-top:1px solid var(--color-border-line);padding-top:var(--cds-pad-md);font-size:var(--cds-font-size-caption);color:var(--color-fg-muted)}
+details.lg-d summary{cursor:pointer;color:var(--color-fg)}
+details.lg-d ul{margin:8px 0 0;padding-left:1.2em;display:flex;flex-direction:column;gap:5px}
+@media print{.lg-ctrl{display:none}table.lg-t{min-width:0}.lg-scroll{overflow:visible}}
+</style>
+
+<div class="lg-wrap">
+
+  <section class="lg-sec" id="tete">
+    <p class="lg-intro" data-read lang="fr">Les 25 étapes de mise en route du QG, cochées au fur et à mesure.
+      <span data-draw="phrase">—</span></p>
+    <div class="lg-tiles">
+      <div class="lg-tile"><span class="k">Étapes faites</span>
+        <span class="v" data-draw="t-faits" data-source="avancement" data-field="faits" data-row="0">—</span>
+        <span class="s">sur <span data-draw="t-total" data-source="avancement" data-field="total" data-row="0">—</span> étapes</span></div>
+      <div class="lg-tile"><span class="k">Reste à faire</span>
+        <span class="v" data-draw="t-reste" data-source="avancement" data-field="reste_h" data-row="0">—</span>
+        <span class="s">sur 4 h 02 de mise en route</span></div>
+      <div class="lg-tile"><span class="k">Phase en cours</span>
+        <span class="v" style="font-size:22px;line-height:1.25" data-draw="t-phase" data-source="avancement" data-field="phase" data-row="0">—</span>
+        <span class="s">la prochaine étape non faite</span></div>
+      <div class="lg-tile"><span class="k">Comptes branchés</span>
+        <span class="v" data-draw="t-conn" data-source="branchements" data-field="branches" data-row="0">—</span>
+        <span class="s">sur 6 connecteurs ; le reste tourne en simulation</span></div>
+    </div>
+  </section>
+
+  <section class="lg-sec" id="phases">
+    <div class="lg-h"><h2>Avancement par phase</h2><span class="note">chaque phase dans l'ordre ; la connaissance est la plus longue</span></div>
+    <div class="lg-phases" data-draw="phases" data-source="parphase"></div>
+  </section>
+
+  <section class="lg-sec" id="etapes">
+    <div class="lg-h"><h2>Les 25 étapes</h2><span class="note">cochez ici ; votre avancement est enregistré pour vous seul</span></div>
+    <div class="lg-ctrl">
+      <select class="dash-select" id="lg-filtre" aria-label="Filtrer les étapes">
+        <option value="toutes">Toutes les étapes</option>
+        <option value="afaire">Celles qui restent</option>
+        <option value="faites">Celles qui sont faites</option>
+      </select>
+      <span id="lg-nosave" hidden>L'avancement n'a pas pu être enregistré.</span>
+    </div>
+    <div class="lg-scroll">
+      <table class="lg-t" data-source="etapes" data-row-key="id">
+        <thead><tr>
+          <th scope="col"><span aria-label="Fait">✓</span></th>
+          <th scope="col" data-field="numero">N°</th>
+          <th scope="col" data-field="phase">Phase</th>
+          <th scope="col" data-field="titre">Étape</th>
+          <th scope="col" data-field="commande">Commande ou fichier</th>
+          <th scope="col" data-field="minutes">Min.</th>
+        </tr></thead>
+        <tbody data-draw="liste"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="lg-sec" id="connecteurs">
+    <div class="lg-h"><h2>Les branchements</h2><span class="note">étape 24 · dans cet ordre : le plus utile et le plus rapide d'abord</span></div>
+    <div class="lg-scroll">
+      <table class="lg-t" data-source="connecteurs" data-row-key="id">
+        <thead><tr>
+          <th scope="col">Branché</th>
+          <th scope="col" data-field="service">Service</th>
+          <th scope="col" data-field="role">Ce qu'il apporte</th>
+          <th scope="col" data-field="variables">Variables à poser dans .env</th>
+          <th scope="col" data-field="minutes">Min.</th>
+        </tr></thead>
+        <tbody data-draw="conn"></tbody>
+      </table>
+    </div>
+    <p class="lg-note"><b>TikTok et YouTube restent en simulation même branchés.</b> Leur API de publication exige une application auditée par la plateforme. Instagram et Facebook publient réellement, via n8n.</p>
+  </section>
+
+  <section class="lg-sec" id="mesure">
+    <div class="lg-h"><h2>Ce que le QG mesurera</h2><span class="note">chiffres d'exemple, remplacés par les vôtres dès Shopify branché</span></div>
+    <div class="lg-funnel" data-draw="entonnoir" data-source="entonnoir"></div>
+    <div class="lg-chart" data-draw="revenus" data-source="posts"></div>
+    <div class="lg-scroll">
+      <table class="lg-t" data-source="boite" data-row-key="etiquette">
+        <thead><tr>
+          <th scope="col" data-field="etiquette">Étiquette</th>
+          <th scope="col" data-field="nombre">Messages</th>
+          <th scope="col" data-field="traitement">Ce que fait le QG</th>
+        </tr></thead>
+        <tbody data-draw="boite"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="lg-d">
+    <summary>D'où viennent ces chiffres</summary>
+    <ul>
+      <li><b>Les 25 étapes et les 6 connecteurs</b> : la liste du dossier de mise en route. Elle ne bouge pas.</li>
+      <li><b>Vos cases cochées</b> : enregistrées pour vous seul, dans ce tableau.</li>
+      <li><b>L'entonnoir, les revenus par post et la boîte</b> : la sortie des commandes <code>qg entonnoir</code> et <code>qg commentaire</code> sur les données d'exemple d'un instructeur de tir. Ce ne sont pas vos chiffres.</li>
+      <li><b>Le temps restant</b> : la somme des minutes des étapes non cochées.</li>
+    </ul>
+  </details>
+</div>
+
+<script>
+window.LG = {
+  filtre: "toutes",
+  COUL: ["#3f7fbf", "#2a9bb5", "#d2601a", "#2f7d4f", "#b3291e"],
+  nb: (n) => new Intl.NumberFormat("fr-FR").format(Math.round(n)),
+  eur: (n) => new Intl.NumberFormat("fr-FR", {style: "currency", currency: "EUR", maximumFractionDigits: 0}).format(n),
+  duree: (min) => {
+    const h = Math.floor(min / 60), m = Math.round(min % 60);
+    return h ? (m ? h + " h " + String(m).padStart(2, "0") : h + " h") : m + " min";
+  },
+  coul: (phase) => window.LG.COUL[(parseInt(String(phase), 10) || 1) - 1] || window.LG.COUL[0],
+  ou: (v) => String(v).replace(/%/g, "%25").replace(/&/g, "%26").replace(/=/g, "%3D"),
+  pret: (id) => dash.data(id).status === "ok",
+  etats: () => {
+    const m = {};
+    for (const r of dash.data("suivi").data || []) m[r.id] = r.etat;
+    return m;
+  }
+};
+
+dash.calc("avancement", {
+  inputs: ["etapes", "suivi"],
+  title: "Avancement de la mise en route",
+  description: "Étapes cochées, temps restant et phase en cours, à partir des 25 étapes et de vos cases.",
+  fn: (etapes, suivi) => {
+    const coche = {};
+    for (const s of suivi || []) coche[s.id] = s.etat === "fait";
+    const liste = [...(etapes || [])].sort((a, b) => a.numero - b.numero);
+    const faits = liste.filter((e) => coche[e.id]).length;
+    const reste = liste.filter((e) => !coche[e.id]).reduce((t, e) => t + Number(e.minutes || 0), 0);
+    const suivante = liste.find((e) => !coche[e.id]);
+    const h = Math.floor(reste / 60), m = reste % 60;
+    return [{
+      faits, total: liste.length,
+      pct: liste.length ? Math.round(100 * faits / liste.length) : 0,
+      reste_min: reste,
+      reste_h: reste === 0 ? "0" : (h ? (m ? h + " h " + String(m).padStart(2, "0") : h + " h") : m + " min"),
+      phase: suivante ? String(suivante.phase).replace(/^\d+\.\s*/, "") : "Terminé",
+      suivante: suivante ? suivante.numero + " · " + suivante.titre : "toutes les étapes sont faites"
+    }];
+  }
+});
+
+dash.calc("parphase", {
+  inputs: ["etapes", "suivi"],
+  title: "Avancement par phase",
+  description: "Pour chacune des 5 phases : étapes faites, total, minutes restantes.",
+  fn: (etapes, suivi) => {
+    const coche = {};
+    for (const s of suivi || []) coche[s.id] = s.etat === "fait";
+    const par = new Map();
+    for (const e of etapes || []) {
+      const cle = String(e.phase);
+      if (!par.has(cle)) par.set(cle, {phase: cle, total: 0, faits: 0, reste_min: 0});
+      const p = par.get(cle);
+      p.total += 1;
+      if (coche[e.id]) p.faits += 1; else p.reste_min += Number(e.minutes || 0);
+    }
+    return [...par.values()].sort((a, b) => a.phase.localeCompare(b.phase))
+      .map((p) => ({...p, pct: p.total ? Math.round(100 * p.faits / p.total) : 0}));
+  }
+});
+
+dash.calc("branchements", {
+  inputs: ["connecteurs", "etats_connecteurs"],
+  title: "Comptes branchés",
+  description: "Nombre de connecteurs marqués branchés, sur les 6 du QG.",
+  fn: (connecteurs, etats) => {
+    const b = new Set((etats || []).filter((e) => e.etat === "branche").map((e) => e.id));
+    return [{branches: (connecteurs || []).filter((c) => b.has(c.id)).length, total: (connecteurs || []).length}];
+  }
+});
+</script>
+
+<script>
+(function () {
+  const un = (id, champ, format) => dash.draw(id, (el) => {
+    const d = dash.data("avancement");
+    el.textContent = (d.status === "ok" && d.data && d.data[0]) ? format(d.data[0][champ]) : "—";
+  });
+  un("t-faits", "faits", (v) => String(v));
+  un("t-total", "total", (v) => String(v));
+  un("t-reste", "reste_h", (v) => String(v));
+  un("t-phase", "phase", (v) => String(v));
+
+  dash.draw("t-conn", (el) => {
+    const d = dash.data("branchements");
+    el.textContent = (d.status === "ok" && d.data && d.data[0]) ? String(d.data[0].branches) : "—";
+  });
+
+  dash.draw("phrase", (el) => {
+    const d = dash.data("avancement");
+    if (d.status !== "ok" || !d.data || !d.data[0]) { el.textContent = "—"; return; }
+    const a = d.data[0];
+    el.textContent = a.faits === 0
+      ? "Rien n'est encore coché : commencez par l'étape 1, trois minutes de vérifications."
+      : a.faits === a.total
+        ? "Les 25 étapes sont faites. Le QG tourne : il ne reste que la tournée du matin à lire."
+        : a.faits + " étapes sur " + a.total + " sont faites, il reste " + a.reste_h
+          + ". Prochaine : " + a.suivante + ".";
+  });
+})();
+</script>
+
+<script>
+(function () {
+  dash.draw("phases", (el) => {
+    const d = dash.data("parphase");
+    if (d.status !== "ok") { el.replaceChildren(); el.classList.add("dash-skeleton"); return; }
+    el.classList.remove("dash-skeleton");
+    const lignes = d.data || [];
+    el.replaceChildren(...lignes.map((p) => {
+      const rang = document.createElement("div");
+      rang.className = "lg-ph";
+      const nom = document.createElement("div");
+      nom.className = "nom";
+      nom.textContent = p.phase;
+      const piste = document.createElement("div");
+      piste.className = "lg-bar";
+      const barre = document.createElement("i");
+      barre.style.width = p.pct + "%";
+      barre.style.background = window.LG.coul(p.phase);
+      piste.append(barre);
+      const chiffre = document.createElement("div");
+      chiffre.className = "chiffre";
+      chiffre.textContent = p.faits + " / " + p.total
+        + (p.reste_min ? "  ·  " + window.LG.duree(p.reste_min) + " restantes" : "  ·  terminée");
+      rang.append(nom, piste, chiffre);
+      return rang;
+    }));
+  });
+})();
+</script>
+
+<script>
+(function () {
+  async function enregistrer(collection, id, ligne) {
+    let ok = true;
+    try {
+      const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+      await db.doc("data/users/" + (await user.id()) + "/legion/" + collection + "/" + id).set(ligne);
+    } catch (e) { ok = false; }
+    document.querySelectorAll("#lg-nosave").forEach((p) => { p.hidden = ok; });
+  }
+
+  const attente = (el, texte) => {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.style.color = "var(--color-fg-muted)";
+    td.textContent = texte;
+    tr.append(td);
+    el.replaceChildren(tr);
+  };
+
+  dash.draw("liste", (el) => {
+    const d = dash.data("etapes");
+    if (d.status !== "ok") {
+      attente(el, d.status === "error"
+        ? "La liste des étapes n'a pas pu être chargée."
+        : "Chargement des 25 étapes…");
+      return;
+    }
+    const etats = window.LG.etats();
+    const filtre = window.LG.filtre;
+    const lignes = [...(d.data || [])].sort((a, b) => a.numero - b.numero)
+      .filter((e) => filtre === "toutes" || (filtre === "faites") === (etats[e.id] === "fait"));
+    if (!lignes.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 6;
+      td.style.color = "var(--color-fg-muted)";
+      td.textContent = filtre === "faites"
+        ? "Aucune étape cochée pour l'instant."
+        : "Toutes les étapes sont faites.";
+      tr.append(td);
+      el.replaceChildren(tr);
+      return;
+    }
+    el.replaceChildren(...lignes.map((e) => {
+      const fait = etats[e.id] === "fait";
+      const tr = document.createElement("tr");
+      tr.dataset.key = e.id;
+      if (fait) tr.className = "fait";
+      const tdCase = document.createElement("td");
+      const boite = document.createElement("input");
+      boite.type = "checkbox";
+      boite.className = "lg-case";
+      boite.checked = fait;
+      boite.id = "lg-case-" + e.id;
+      boite.setAttribute("aria-label", "Étape " + e.numero + " : " + e.titre);
+      boite.addEventListener("change", () => {
+        enregistrer("suivi", e.id, {etat: boite.checked ? "fait" : "afaire", quand: new Date().toISOString()});
+      });
+      tdCase.append(boite);
+      const tdNum = document.createElement("td");
+      tdNum.className = "num";
+      tdNum.textContent = String(e.numero);
+      const tdPh = document.createElement("td");
+      tdPh.className = "ph";
+      const puce = document.createElement("span");
+      puce.textContent = e.phase;
+      const c = window.LG.coul(e.phase);
+      puce.style.color = c;
+      puce.style.border = "1px solid " + c;
+      tdPh.append(puce);
+      const tdTit = document.createElement("td");
+      tdTit.className = "tit";
+      tdTit.textContent = e.titre;
+      const tdCmd = document.createElement("td");
+      tdCmd.className = "cmd";
+      tdCmd.textContent = e.commande;
+      const tdMin = document.createElement("td");
+      tdMin.className = "min";
+      tdMin.textContent = String(e.minutes);
+      tr.append(tdCase, tdNum, tdPh, tdTit, tdCmd, tdMin);
+      return tr;
+    }));
+  });
+
+  dash.draw("conn", (el) => {
+    const d = dash.data("connecteurs");
+    if (d.status !== "ok") {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 5;
+      td.style.color = "var(--color-fg-muted)";
+      td.textContent = d.status === "error" ? "Les connecteurs n'ont pas pu être chargés." : "Chargement…";
+      tr.append(td);
+      el.replaceChildren(tr);
+      return;
+    }
+    const etats = {};
+    for (const r of dash.data("etats_connecteurs").data || []) etats[r.id] = r.etat;
+    const lignes = [...(d.data || [])].sort((a, b) => a.ordre - b.ordre);
+    el.replaceChildren(...lignes.map((c) => {
+      const branche = etats[c.id] === "branche";
+      const tr = document.createElement("tr");
+      tr.dataset.key = c.id;
+      const tdCase = document.createElement("td");
+      const boite = document.createElement("input");
+      boite.type = "checkbox";
+      boite.className = "lg-case";
+      boite.checked = branche;
+      boite.id = "lg-conn-" + c.id;
+      boite.setAttribute("aria-label", c.service + " branché");
+      boite.addEventListener("change", () => {
+        enregistrer("connecteurs", c.id, {etat: boite.checked ? "branche" : "simulation", quand: new Date().toISOString()});
+      });
+      tdCase.append(boite);
+      const tdServ = document.createElement("td");
+      const etat = document.createElement("span");
+      etat.className = "lg-etat";
+      const pt = document.createElement("i");
+      pt.className = "lg-pt";
+      pt.style.background = branche ? "var(--color-ok)" : "var(--color-warn)";
+      const nom = document.createElement("b");
+      nom.textContent = c.service;
+      etat.append(pt, nom);
+      tdServ.append(etat);
+      const tdRole = document.createElement("td");
+      tdRole.textContent = c.role;
+      const tdVar = document.createElement("td");
+      tdVar.className = "cmd";
+      tdVar.textContent = c.variables;
+      const tdMin = document.createElement("td");
+      tdMin.className = "min";
+      tdMin.textContent = String(c.minutes);
+      tr.append(tdCase, tdServ, tdRole, tdVar, tdMin);
+      return tr;
+    }));
+  });
+
+  document.querySelectorAll("#lg-filtre").forEach((sel) => {
+    sel.addEventListener("change", () => {
+      window.LG.filtre = sel.value;
+      dash.draw("liste");
+    });
+  });
+})();
+</script>
+
+<script>
+(function () {
+  dash.draw("entonnoir", (el) => {
+    const d = dash.data("entonnoir");
+    if (d.status !== "ok") { el.replaceChildren(); el.classList.add("dash-skeleton"); return; }
+    el.classList.remove("dash-skeleton");
+    const lignes = [...(d.data || [])].sort((a, b) => a.rang - b.rang);
+    const haut = Math.max(1, ...lignes.map((l) => Number(l.valeur)));
+    el.replaceChildren(...lignes.map((l, i) => {
+      const rang = document.createElement("div");
+      rang.className = "lg-fr";
+      const lab = document.createElement("div");
+      lab.className = "lab";
+      lab.textContent = l.etape;
+      const boite = document.createElement("div");
+      const barre = document.createElement("div");
+      barre.className = "lg-fbar";
+      barre.style.width = Math.max(1.2, 100 * Math.sqrt(Number(l.valeur) / haut)) + "%";
+      barre.style.background = window.LG.COUL[1];
+      barre.style.opacity = String(1 - i * 0.14);
+      boite.append(barre);
+      const val = document.createElement("div");
+      val.className = "val";
+      val.dataset.source = "entonnoir";
+      val.dataset.field = "valeur";
+      val.dataset.where = "etape=" + window.LG.ou(l.etape);
+      val.textContent = window.LG.nb(l.valeur);
+      rang.append(lab, boite, val);
+      return rang;
+    }));
+  });
+
+  dash.draw("revenus", {
+    mount: (el) => {
+      const svg = d3.select(el).append("svg").attr("width", "100%").attr("role", "img");
+      const tip = d3.select(el).append("div").attr("class", "lg-tip").style("display", "none");
+      el.style.position = "relative";
+      return {svg, tip};
+    },
+    update: (el, fait) => {
+      const d = dash.data("posts");
+      const {svg, tip} = fait;
+      if (d.status !== "ok") {
+        svg.selectAll("*").remove();
+        svg.attr("viewBox", "0 0 400 40").attr("height", 40).append("text")
+          .attr("x", 0).attr("y", 22).attr("font-size", 12)
+          .text(d.status === "error" ? "Les revenus par post n'ont pas pu être chargés." : "Chargement des revenus par post…");
+        return;
+      }
+      const lignes = [...(d.data || [])].sort((a, b) => b.revenus - a.revenus);
+      const largeur = Math.max(280, el.clientWidth || 600);
+      const hauteur = 54 + lignes.length * 30;
+      svg.attr("viewBox", "0 0 " + largeur + " " + hauteur).attr("height", hauteur)
+        .attr("aria-label", "Revenus rattachés à chaque post, du plus rapporteur au moins rapporteur, sur 7 jours de données d'exemple.");
+      svg.selectAll("*").remove();
+      const g = svg.append("g");
+      const mesure = g.append("g").attr("opacity", 0);
+      let gauche = 0;
+      mesure.selectAll("text").data(lignes).join("text").text((p) => p.titre)
+        .each(function () { gauche = Math.max(gauche, this.getComputedTextLength()); });
+      mesure.remove();
+      gauche = Math.min(gauche + 12, Math.max(90, largeur * 0.42));
+      const droite = 62, haut = 26, bas = 22;
+      const x = d3.scaleLinear().domain([0, d3.max(lignes, (p) => p.revenus) || 1]).nice()
+        .range([gauche, largeur - droite]);
+      const y = d3.scaleBand().domain(lignes.map((p) => p.post)).range([haut, hauteur - bas]).padding(0.28);
+      g.append("text").attr("x", 0).attr("y", 13).attr("font-size", 11.5)
+        .text("Revenus par post · 7 jours · données d'exemple");
+      g.append("g").attr("transform", "translate(0," + (hauteur - bas) + ")")
+        .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(largeur / 140))).tickFormat((v) => window.LG.nb(v) + " €"))
+        .call((s) => s.select(".domain").attr("stroke", "var(--cds-chart-axis, currentColor)"))
+        .call((s) => s.selectAll("line").attr("stroke", "var(--cds-chart-axis, currentColor)"));
+      g.selectAll("rect.b").data(lignes).join("rect").attr("class", "b")
+        .attr("x", gauche).attr("y", (p) => y(p.post)).attr("height", y.bandwidth())
+        .attr("rx", 3)
+        .attr("width", (p) => Math.max(1, x(p.revenus) - gauche))
+        .style("fill", (p) => p.revenus === 0 ? "var(--cds-chart-status-critical, #b3291e)" : window.LG.COUL[3])
+        .on("pointerenter", function (ev, p) {
+          tip.style("display", "block").text(p.titre + " · " + window.LG.eur(p.revenus) + " · "
+            + window.LG.nb(p.clics) + " clics · " + window.LG.nb(p.jaime) + " j'aime");
+        })
+        .on("pointermove", function (ev) {
+          const b = el.getBoundingClientRect();
+          const w = tip.node().offsetWidth;
+          tip.style("left", Math.min(Math.max(4, ev.clientX - b.left - w / 2), Math.max(4, b.width - w - 4)) + "px")
+            .style("top", Math.max(2, ev.clientY - b.top - 34) + "px");
+        })
+        .on("pointerleave", () => tip.style("display", "none"));
+      g.selectAll("text.n").data(lignes).join("text").attr("class", "n")
+        .attr("x", gauche - 8).attr("y", (p) => y(p.post) + y.bandwidth() / 2 + 4)
+        .attr("text-anchor", "end").text((p) => p.titre);
+      g.selectAll("text.v").data(lignes).join("text").attr("class", "v")
+        .attr("x", (p) => x(p.revenus) + 6).attr("y", (p) => y(p.post) + y.bandwidth() / 2 + 4)
+        .attr("font-variant-numeric", "tabular-nums")
+        .attr("data-source", "posts").attr("data-field", "revenus")
+        .attr("data-where", (p) => "post=" + window.LG.ou(p.post))
+        .text((p) => window.LG.nb(p.revenus));
+    }
+  });
+
+  dash.draw("boite", (el) => {
+    const d = dash.data("boite");
+    if (d.status !== "ok") {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 3;
+      td.style.color = "var(--color-fg-muted)";
+      td.textContent = d.status === "error" ? "Le tri de la boîte n'a pas pu être chargé." : "Chargement…";
+      tr.append(td);
+      el.replaceChildren(tr);
+      return;
+    }
+    el.replaceChildren(...(d.data || []).map((r) => {
+      const tr = document.createElement("tr");
+      tr.dataset.key = r.etiquette;
+      const a = document.createElement("td");
+      a.textContent = r.etiquette;
+      const b = document.createElement("td");
+      b.className = "num";
+      b.textContent = String(r.nombre);
+      const c = document.createElement("td");
+      c.textContent = r.traitement;
+      tr.append(a, b, c);
+      return tr;
+    }));
+  });
+})();
+</script>
