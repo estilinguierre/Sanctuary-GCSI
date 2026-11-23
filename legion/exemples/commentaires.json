@@ -1,0 +1,178 @@
+[
+ {
+  "id": "C001",
+  "auteur": "Théo",
+  "plateforme": "instagram",
+  "canal": "message",
+  "texte": "C'est quoi le prix du stage niveau 1 ?",
+  "date": "J-0"
+ },
+ {
+  "id": "C002",
+  "auteur": "Mia",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Il reste des places en mars ?",
+  "date": "J-1"
+ },
+ {
+  "id": "C003",
+  "auteur": "Diego",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Quanto custa o curso?",
+  "date": "J-2"
+ },
+ {
+  "id": "C004",
+  "auteur": "Sofia",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "C'est adapté à une débutante ?",
+  "date": "J-3"
+ },
+ {
+  "id": "C005",
+  "auteur": "Noah",
+  "plateforme": "youtube",
+  "canal": "commentaire",
+  "texte": "Tu filmes avec quoi ?",
+  "date": "J-4"
+ },
+ {
+  "id": "C006",
+  "auteur": "Fatima",
+  "plateforme": "tiktok",
+  "canal": "commentaire",
+  "texte": "Enfin quelqu'un qui explique clairement",
+  "date": "J-5"
+ },
+ {
+  "id": "C007",
+  "auteur": "Léo",
+  "plateforme": "instagram",
+  "canal": "message",
+  "texte": "Commande pas reçue depuis 10 jours",
+  "date": "J-0"
+ },
+ {
+  "id": "C008",
+  "auteur": "x_promo",
+  "plateforme": "tiktok",
+  "canal": "commentaire",
+  "texte": "Gagne 500 € par jour, clique ici",
+  "date": "J-1"
+ },
+ {
+  "id": "C009",
+  "auteur": "Léa",
+  "plateforme": "instagram",
+  "canal": "message",
+  "texte": "je veux m'inscrire, comment on fait ?",
+  "date": "J-2"
+ },
+ {
+  "id": "C010",
+  "auteur": "Maya",
+  "plateforme": "youtube",
+  "canal": "commentaire",
+  "texte": "190 € la journée ? je prends",
+  "date": "J-3"
+ },
+ {
+  "id": "C011",
+  "auteur": "Mei",
+  "plateforme": "tiktok",
+  "canal": "commentaire",
+  "texte": "le sac existe en coffret ? prix ?",
+  "date": "J-4"
+ },
+ {
+  "id": "C012",
+  "auteur": "Emma",
+  "plateforme": "instagram",
+  "canal": "message",
+  "texte": "combien pour deux personnes ?",
+  "date": "J-5"
+ },
+ {
+  "id": "C013",
+  "auteur": "Rosa",
+  "plateforme": "facebook",
+  "canal": "commentaire",
+  "texte": "c'est combien en reais ?",
+  "date": "J-0"
+ },
+ {
+  "id": "C014",
+  "auteur": "Ava",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Combien ?? j'en ai besoin",
+  "date": "J-1"
+ },
+ {
+  "id": "C015",
+  "auteur": "Hugo",
+  "plateforme": "youtube",
+  "canal": "commentaire",
+  "texte": "Matin ou soir pour s'entraîner ?",
+  "date": "J-2"
+ },
+ {
+  "id": "C016",
+  "auteur": "Inès",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Quel équipement pour commencer ?",
+  "date": "J-3"
+ },
+ {
+  "id": "C017",
+  "auteur": "Paul",
+  "plateforme": "tiktok",
+  "canal": "commentaire",
+  "texte": "Stage : âge minimum, licence ?",
+  "date": "J-4"
+ },
+ {
+  "id": "C018",
+  "auteur": "Jade",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Bravo, très clair",
+  "date": "J-5"
+ },
+ {
+  "id": "C019",
+  "auteur": "Marc",
+  "plateforme": "instagram",
+  "canal": "message",
+  "texte": "Je veux un remboursement, sangle cassée",
+  "date": "J-0"
+ },
+ {
+  "id": "C020",
+  "auteur": "Nina",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "STAGE",
+  "date": "J-1"
+ },
+ {
+  "id": "C021",
+  "auteur": "Omar",
+  "plateforme": "tiktok",
+  "canal": "commentaire",
+  "texte": "Comment tu règles ta hausse ?",
+  "date": "J-2"
+ },
+ {
+  "id": "C022",
+  "auteur": "Zoé",
+  "plateforme": "instagram",
+  "canal": "commentaire",
+  "texte": "Merci pour la routine",
+  "date": "J-3"
+ }
+]

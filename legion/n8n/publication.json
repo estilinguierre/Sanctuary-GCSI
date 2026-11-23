@@ -1,0 +1,44 @@
+{
+  "name": "Légion · publication multi-plateformes",
+  "nodes": [
+    {"parameters": {"httpMethod": "POST", "path": "legion-publication", "responseMode": "lastNode"},
+     "id": "webhook", "name": "Le QG appelle", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 0]},
+    {"parameters": {"rules": {"values": [
+        {"conditions": {"options": {"caseSensitive": false}, "conditions": [
+          {"leftValue": "={{ $json.plateforme }}", "rightValue": "instagram", "operator": {"type": "string", "operation": "equals"}}]}},
+        {"conditions": {"options": {"caseSensitive": false}, "conditions": [
+          {"leftValue": "={{ $json.plateforme }}", "rightValue": "facebook", "operator": {"type": "string", "operation": "equals"}}]}},
+        {"conditions": {"options": {"caseSensitive": false}, "conditions": [
+          {"leftValue": "={{ $json.simulation }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true"}}]}}]}},
+     "id": "aiguillage", "name": "Quelle plateforme ?", "type": "n8n-nodes-base.switch", "typeVersion": 3, "position": [220, 0]},
+    {"parameters": {"amount": "={{ Math.max(0, new Date($json.quand).getTime() - Date.now()) }}", "unit": "ms"},
+     "id": "attente", "name": "Attendre le créneau", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [440, -160]},
+    {"parameters": {"method": "POST",
+       "url": "=https://graph.facebook.com/v21.0/{{ $env.META_COMPTE_IG }}/media",
+       "sendBody": true, "specifyBody": "json",
+       "jsonBody": "={{ JSON.stringify({ video_url: $json.media_url, media_type: 'REELS', caption: $json.legende + ' ' + ($json.mots_diese || []).join(' '), access_token: $env.META_JETON }) }}"},
+     "id": "ig1", "name": "Instagram · déposer", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [660, -220]},
+    {"parameters": {"method": "POST",
+       "url": "=https://graph.facebook.com/v21.0/{{ $env.META_COMPTE_IG }}/media_publish",
+       "sendBody": true, "specifyBody": "json",
+       "jsonBody": "={{ JSON.stringify({ creation_id: $json.id, access_token: $env.META_JETON }) }}"},
+     "id": "ig2", "name": "Instagram · publier", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [880, -220]},
+    {"parameters": {"method": "POST",
+       "url": "=https://graph.facebook.com/v21.0/{{ $env.META_PAGE }}/videos",
+       "sendBody": true, "specifyBody": "json",
+       "jsonBody": "={{ JSON.stringify({ file_url: $json.media_url, description: $json.legende, access_token: $env.META_JETON }) }}"},
+     "id": "fb", "name": "Facebook · publier", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [660, -20]},
+    {"parameters": {"jsCode": "return [{ json: { etat: 'simulation', raison: \"l'application de cette plateforme n'est pas encore auditée\", post: $json.post, plateforme: $json.plateforme } }];"},
+     "id": "sim", "name": "Simulation (TikTok, YouTube)", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [660, 180]}
+  ],
+  "connections": {
+    "Le QG appelle": {"main": [[{"node": "Quelle plateforme ?", "type": "main", "index": 0}]]},
+    "Quelle plateforme ?": {"main": [
+      [{"node": "Attendre le créneau", "type": "main", "index": 0}],
+      [{"node": "Facebook · publier", "type": "main", "index": 0}],
+      [{"node": "Simulation (TikTok, YouTube)", "type": "main", "index": 0}]]},
+    "Attendre le créneau": {"main": [[{"node": "Instagram · déposer", "type": "main", "index": 0}]]},
+    "Instagram · déposer": {"main": [[{"node": "Instagram · publier", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}

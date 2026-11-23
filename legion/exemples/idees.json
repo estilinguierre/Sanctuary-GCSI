@@ -1,0 +1,156 @@
+[
+ {
+  "id": "I001",
+  "titre": "La prise en main d'abord",
+  "format": "Reel",
+  "pilier": "Technique",
+  "sujet": "la prise en main",
+  "accroche": "Ton tir part de travers avant même de presser la détente.",
+  "source": "vous",
+  "note": 60,
+  "etat": "libre"
+ },
+ {
+  "id": "I002",
+  "titre": "Routine en 3 gestes",
+  "format": "Carrousel",
+  "pilier": "Technique",
+  "sujet": "la routine d'échauffement",
+  "accroche": "Pourquoi tout le monde complique. Trois gestes, pas dix.",
+  "source": "vous",
+  "note": 59,
+  "etat": "libre"
+ },
+ {
+  "id": "I003",
+  "titre": "Jour 1 contre jour 30",
+  "format": "Reel",
+  "pilier": "Preuve",
+  "sujet": "la progression d'un élève",
+  "accroche": "Le même élève, la même cible, trente jours d'écart.",
+  "source": "vous",
+  "note": 58,
+  "etat": "libre"
+ },
+ {
+  "id": "I004",
+  "titre": "Épisode un",
+  "format": "Reel",
+  "pilier": "Histoire",
+  "sujet": "la règle apprise à la Légion",
+  "accroche": "Épisode un : ce qu'on ne vous a jamais raconté.",
+  "source": "vous",
+  "note": 57,
+  "etat": "libre"
+ },
+ {
+  "id": "I005",
+  "titre": "À sec seulement",
+  "format": "Reel",
+  "pilier": "Technique",
+  "sujet": "le tir à sec",
+  "accroche": "Dix minutes à sec valent une boîte de cartouches.",
+  "source": "vous",
+  "note": 56,
+  "etat": "libre"
+ },
+ {
+  "id": "I006",
+  "titre": "Programme stagiaires",
+  "format": "Reel",
+  "pilier": "Offre",
+  "sujet": "le stage de mars",
+  "accroche": "Les inscriptions du stage de mars sont ouvertes, c'est incroyable comme ça part vite.",
+  "source": "vous",
+  "note": 55,
+  "etat": "libre"
+ },
+ {
+  "id": "I007",
+  "titre": "Remise à zéro du dimanche",
+  "format": "Reel",
+  "pilier": "Coulisses",
+  "sujet": "la routine du dimanche",
+  "accroche": "Ma routine du dimanche, quatre minutes, temps réel.",
+  "source": "vous",
+  "note": 54,
+  "etat": "libre"
+ },
+ {
+  "id": "I008",
+  "titre": "Dernières places",
+  "format": "Légende",
+  "pilier": "Offre",
+  "sujet": "les places de samedi",
+  "accroche": "Il reste 4 places samedi. Après, c'est avril.",
+  "source": "vous",
+  "note": 53,
+  "etat": "libre"
+ },
+ {
+  "id": "I009",
+  "titre": "La détente qui pique",
+  "format": "Reel",
+  "pilier": "Technique",
+  "sujet": "la détente",
+  "accroche": "Tu crispes ? Regarde ce détail avant d'acheter quoi que ce soit.",
+  "source": "vous",
+  "note": 52,
+  "etat": "libre"
+ },
+ {
+  "id": "I010",
+  "titre": "Décodeur d'équipement",
+  "format": "Carrousel",
+  "pilier": "Technique",
+  "sujet": "les sangles du sac",
+  "accroche": "Le secret de chaque sangle de ton sac.",
+  "source": "vous",
+  "note": 51,
+  "etat": "libre"
+ },
+ {
+  "id": "I011",
+  "titre": "Promesse de résultat",
+  "format": "Légende",
+  "pilier": "Preuve",
+  "sujet": "le groupement",
+  "accroche": "Groupement divisé par deux en 3 jours, garanti.",
+  "source": "vous",
+  "note": 50,
+  "etat": "libre"
+ },
+ {
+  "id": "I012",
+  "titre": "Mot de l'instructeur",
+  "format": "Légende",
+  "pilier": "Histoire",
+  "sujet": "mes débuts",
+  "accroche": "J'ai commencé avec un stand vide et une règle.",
+  "source": "vous",
+  "note": 49,
+  "etat": "libre"
+ },
+ {
+  "id": "I013",
+  "titre": "Préparation des colis",
+  "format": "Légende",
+  "pilier": "Coulisses",
+  "sujet": "les commandes",
+  "accroche": "Je prépare vos commandes moi-même ce week-end.",
+  "source": "vous",
+  "note": 48,
+  "etat": "libre"
+ },
+ {
+  "id": "I014",
+  "titre": "Idées reçues",
+  "format": "Carrousel",
+  "pilier": "Preuve",
+  "sujet": "les idées reçues",
+  "accroche": "« Il faut tirer beaucoup pour progresser. » Faux.",
+  "source": "vous",
+  "note": 47,
+  "etat": "libre"
+ }
+]

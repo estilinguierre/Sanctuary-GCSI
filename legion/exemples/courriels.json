@@ -1,0 +1,23 @@
+[
+ {
+  "id": "M001",
+  "de": "partenariats@marque-optique.example",
+  "objet": "Proposition de collaboration",
+  "texte": "Bonjour, nous aimerions vous proposer un partenariat rémunéré : 2 vidéos sponsorisées, budget 800 €.",
+  "date": "J-1"
+ },
+ {
+  "id": "M002",
+  "de": "lettre@boutique.example",
+  "objet": "Nos promos de la semaine",
+  "texte": "Profitez de -20 % sur tout le site.",
+  "date": "J-2"
+ },
+ {
+  "id": "M003",
+  "de": "contact@club-tir.example",
+  "objet": "Intervention au club",
+  "texte": "Seriez-vous disponible pour une collaboration : animer une journée dans notre club ? Merci de nous envoyer un devis.",
+  "date": "J-3"
+ }
+]

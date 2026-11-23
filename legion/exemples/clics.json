@@ -1,0 +1,44 @@
+[
+ {
+  "post_id": "X01",
+  "clics": 410,
+  "hier": 45,
+  "aujourdhui": 180
+ },
+ {
+  "post_id": "X02",
+  "clics": 260,
+  "hier": 28,
+  "aujourdhui": 28
+ },
+ {
+  "post_id": "X03",
+  "clics": 190,
+  "hier": 21,
+  "aujourdhui": 21
+ },
+ {
+  "post_id": "X04",
+  "clics": 120,
+  "hier": 13,
+  "aujourdhui": 13
+ },
+ {
+  "post_id": "X05",
+  "clics": 80,
+  "hier": 8,
+  "aujourdhui": 8
+ },
+ {
+  "post_id": "X06",
+  "clics": 90,
+  "hier": 10,
+  "aujourdhui": 10
+ },
+ {
+  "post_id": "X07",
+  "clics": 0,
+  "hier": 0,
+  "aujourdhui": 0
+ }
+]

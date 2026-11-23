@@ -1,0 +1,107 @@
+[
+ {
+  "post_id": "X01",
+  "titre": "Jour 1 contre jour 30",
+  "format": "Reel",
+  "plateforme": "instagram",
+  "vues": 52000,
+  "jaime": 3100,
+  "abonnes": 190,
+  "retention_3s": 0.71,
+  "accroche": "Exemple réel : même cible, 30 jours.",
+  "premiere_heure": {
+   "vues": 4333,
+   "retention_3s": 0.71
+  }
+ },
+ {
+  "post_id": "X02",
+  "titre": "Routine en 3 gestes",
+  "format": "Carrousel",
+  "plateforme": "instagram",
+  "vues": 31000,
+  "jaime": 2200,
+  "abonnes": 120,
+  "retention_3s": 0.64,
+  "accroche": "Pourquoi tout le monde complique ?",
+  "premiere_heure": {
+   "vues": 2583,
+   "retention_3s": 0.64
+  }
+ },
+ {
+  "post_id": "X03",
+  "titre": "Dernières places",
+  "format": "Légende",
+  "plateforme": "instagram",
+  "vues": 18000,
+  "jaime": 900,
+  "abonnes": 40,
+  "retention_3s": 0.52,
+  "accroche": "Il reste 4 places samedi.",
+  "premiere_heure": {
+   "vues": 1500,
+   "retention_3s": 0.52
+  }
+ },
+ {
+  "post_id": "X04",
+  "titre": "Épisode un",
+  "format": "Reel",
+  "plateforme": "instagram",
+  "vues": 22000,
+  "jaime": 1800,
+  "abonnes": 90,
+  "retention_3s": 0.58,
+  "accroche": "Épisode un : la règle apprise à la Légion.",
+  "premiere_heure": {
+   "vues": 1833,
+   "retention_3s": 0.58
+  }
+ },
+ {
+  "post_id": "X05",
+  "titre": "Préparation des colis",
+  "format": "Légende",
+  "plateforme": "instagram",
+  "vues": 9000,
+  "jaime": 600,
+  "abonnes": 20,
+  "retention_3s": 0.47,
+  "accroche": "Je prépare vos commandes moi-même.",
+  "premiere_heure": {
+   "vues": 750,
+   "retention_3s": 0.47
+  }
+ },
+ {
+  "post_id": "X06",
+  "titre": "Remise à zéro du dimanche",
+  "format": "Reel",
+  "plateforme": "instagram",
+  "vues": 11000,
+  "jaime": 950,
+  "abonnes": 45,
+  "retention_3s": 0.55,
+  "accroche": "Ma routine du dimanche, temps réel.",
+  "premiere_heure": {
+   "vues": 916,
+   "retention_3s": 0.55
+  }
+ },
+ {
+  "post_id": "X07",
+  "titre": "Tendance du moment",
+  "format": "Reel",
+  "plateforme": "instagram",
+  "vues": 41000,
+  "jaime": 24600,
+  "abonnes": 115,
+  "retention_3s": 0.33,
+  "accroche": "Je teste la tendance du moment.",
+  "premiere_heure": {
+   "vues": 3416,
+   "retention_3s": 0.33
+  }
+ }
+]
